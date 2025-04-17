@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_PORT=${DB_PORT}
+      - DATABASE_USER=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASSWORD}
+      - DATABASE_NAME=${DB_NAME}
+    depends_on:
+      - db
+    networks:
+      - quiz-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - quiz-network
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quiz-network
+    restart: unless-stopped
+
+networks:
+  quiz-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&subset=cyrillic,cyrillic-ext');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 210 20% 98%;
+    --foreground: 224 71.4% 4.1%;
+    
+    /* Card colors */
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    
+    /* Popover colors */
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    
+    /* Primary colors - Royal Blue */
+    --primary: 225 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary colors */
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 225 25% 25%;
+    
+    /* Muted colors - for subtle UI elements */
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 225 25% 35%;
+    
+    /* Accent colors - for highlighted elements */
+    --accent: 225 70% 96%;
+    --accent-foreground: 225 70% 30%;
+    
+    /* Destructive colors - for errors and warnings */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    
+    /* Success colors */
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Info colors */
+    --info: 200 98% 39%;
+    --info-foreground: 0 0% 100%;
+    
+    /* Warning colors */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    
+    /* Border and input styles */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 225 70% 50%;
+    
+    /* Border radius and font */
+    --radius: 0.5rem;
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .dark {
+    /* Base colors */
+    --background: 224 40% 10%;
+    --foreground: 210 20% 98%;
+    
+    /* Card colors */
+    --card: 224 40% 12%;
+    --card-foreground: 210 20% 98%;
+    
+    /* Popover colors */
+    --popover: 224 40% 12%;
+    --popover-foreground: 210 20% 98%;
+    
+    /* Primary colors - Royal Blue */
+    --primary: 225 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary colors */
+    --secondary: 225 25% 20%;
+    --secondary-foreground: 210 20% 98%;
+    
+    /* Muted colors */
+    --muted: 225 25% 20%;
+    --muted-foreground: 217.9 20% 80%;
+    
+    /* Accent colors */
+    --accent: 225 70% 30%;
+    --accent-foreground: 210 20% 98%;
+    
+    /* Destructive colors */
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 20% 98%;
+    
+    /* Success colors */
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Info colors */
+    --info: 200 98% 45%;
+    --info-foreground: 0 0% 100%;
+    
+    /* Warning colors */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    
+    /* Border and input styles */
+    --border: 225 25% 20%;
+    --input: 225 25% 20%;
+    --ring: 225 70% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Additional utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+} 
