@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class UsersService {
@@ -11,21 +12,23 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) { }
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const user = this.usersRepository.create(createUserDto);
-    return this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+    return UserResponseDto.fromEntity(savedUser);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+  async findAll(): Promise<UserResponseDto[]> {
+    const users = await this.usersRepository.find();
+    return users.map(user => UserResponseDto.fromEntity(user));
   }
 
-  async findOne(id: number): Promise<User> {
+  async findOne(id: number): Promise<UserResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    return user;
+    return UserResponseDto.fromEntity(user);
   }
 
   async findByEmail(email: string): Promise<User> {
@@ -41,14 +44,21 @@ export class UsersService {
   }
 
   // New methods for admin functionality
-  async updateUserRole(id: number, role: UserRole): Promise<User> {
-    const user = await this.findOne(id);
+  async updateUserRole(id: number, role: UserRole): Promise<UserResponseDto> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
     user.role = role;
-    return this.usersRepository.save(user);
+    const updatedUser = await this.usersRepository.save(user);
+    return UserResponseDto.fromEntity(updatedUser);
   }
 
   async remove(id: number): Promise<void> {
-    const user = await this.findOne(id);
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
     await this.usersRepository.remove(user);
   }
 
@@ -71,10 +81,11 @@ export class UsersService {
     }, {} as Record<UserRole, number>);
   }
 
-  async findRecent(limit: number): Promise<User[]> {
-    return this.usersRepository.find({
+  async findRecent(limit: number): Promise<UserResponseDto[]> {
+    const users = await this.usersRepository.find({
       order: { id: 'DESC' },
       take: limit,
     });
+    return users.map(user => UserResponseDto.fromEntity(user));
   }
 } 

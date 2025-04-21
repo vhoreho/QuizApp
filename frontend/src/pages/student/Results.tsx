@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, UserRole } from "../../lib/types";
+import { User, UserRole, Result, Quiz } from "../../lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
-import { ArrowLeftIcon } from "@radix-ui/react-icons";
+import {
+  ArrowLeftIcon,
+  BookmarkIcon,
+  BarChartIcon,
+  StarIcon,
+  MagnifyingGlassIcon,
+  CheckCircledIcon,
+  Cross2Icon,
+} from "@radix-ui/react-icons";
 import {
   Table,
   TableBody,
@@ -20,24 +28,28 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import api from "../../api/axiosConfig";
+import { toast } from "@/components/ui/use-toast";
+import { useStudentResults } from "@/hooks/queries/useQuizzes";
 
-interface QuizResult {
+interface DisplayResult {
   id: number;
   quizId: number;
   quizTitle: string;
   date: string;
   score: number;
-  maxScore: number;
-  timeSpent: string;
-  category: string;
+  correctAnswers: number;
+  totalQuestions: number;
+  category?: string;
 }
+
+// Using the original Result interface without modification
+// The 'quiz' property is already optional in the Result interface
 
 export default function StudentResults() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [results, setResults] = useState<QuizResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: apiResults, isLoading, error: apiError } = useStudentResults();
+  const [displayResults, setDisplayResults] = useState<DisplayResult[]>([]);
 
   useEffect(() => {
     const userJson = localStorage.getItem("user");
@@ -53,65 +65,25 @@ export default function StudentResults() {
     }
 
     setCurrentUser(user);
-    fetchResults();
   }, [navigate]);
 
-  const fetchResults = async () => {
-    setIsLoading(true);
-    try {
-      // In a real application, this would fetch from your API
-      // const response = await api.get("/student/results");
-      // setResults(response.data);
-
-      // Mock data for demonstration
-      setResults([
-        {
-          id: 1,
-          quizId: 1,
-          quizTitle: "Основы JavaScript",
-          date: "2023-10-15T14:30:00Z",
-          score: 8,
-          maxScore: 10,
-          timeSpent: "12 мин",
-          category: "JavaScript",
-        },
-        {
-          id: 2,
-          quizId: 3,
-          quizTitle: "Основы HTML и CSS",
-          date: "2023-10-16T11:45:00Z",
-          score: 13,
-          maxScore: 15,
-          timeSpent: "20 мин",
-          category: "Веб-разработка",
-        },
-        {
-          id: 3,
-          quizId: 2,
-          quizTitle: "Алгоритмы и структуры данных",
-          date: "2023-10-18T09:15:00Z",
-          score: 5,
-          maxScore: 8,
-          timeSpent: "18 мин",
-          category: "Алгоритмы",
-        },
-        {
-          id: 4,
-          quizId: 4,
-          quizTitle: "React Основы",
-          date: "2023-10-20T16:20:00Z",
-          score: 10,
-          maxScore: 12,
-          timeSpent: "25 мин",
-          category: "JavaScript",
-        },
-      ]);
-    } catch (err) {
-      console.error("Error fetching results:", err);
-    } finally {
-      setIsLoading(false);
+  // Обработка результатов API для отображения
+  useEffect(() => {
+    if (apiResults) {
+      const formattedResults = apiResults.map((result: Result) => ({
+        id: result.id,
+        quizId: result.quizId,
+        quizTitle: result.quiz?.title || "Неизвестный тест",
+        date: result.createdAt,
+        score: result.score,
+        correctAnswers: result.correctAnswers,
+        totalQuestions: result.totalQuestions,
+      }));
+      setDisplayResults(formattedResults);
+    } else {
+      setDisplayResults([]);
     }
-  };
+  }, [apiResults]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -130,23 +102,46 @@ export default function StudentResults() {
     });
   };
 
-  const getScoreColor = (score: number, maxScore: number) => {
-    const percentage = (score / maxScore) * 100;
-    if (percentage >= 80) return "text-success";
-    if (percentage >= 60) return "text-secondary";
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return "text-success";
+    if (score >= 6) return "text-secondary";
     return "text-destructive";
   };
 
-  const getScoreBadge = (score: number, maxScore: number) => {
-    const percentage = (score / maxScore) * 100;
-    if (percentage >= 80) {
-      return <Badge variant="success">Отлично</Badge>;
-    } else if (percentage >= 60) {
-      return <Badge>Хорошо</Badge>;
-    } else if (percentage >= 40) {
-      return <Badge variant="secondary">Удовлетворительно</Badge>;
+  const getScoreBadge = (score: number) => {
+    if (score >= 8) {
+      return (
+        <Badge
+          variant="success"
+          className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-medium"
+        >
+          Отлично
+        </Badge>
+      );
+    } else if (score >= 6) {
+      return (
+        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 font-medium">
+          Хорошо
+        </Badge>
+      );
+    } else if (score >= 4) {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 font-medium"
+        >
+          Удовлетворительно
+        </Badge>
+      );
     } else {
-      return <Badge variant="destructive">Неудовлетворительно</Badge>;
+      return (
+        <Badge
+          variant="destructive"
+          className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium"
+        >
+          Неудовлетворительно
+        </Badge>
+      );
     }
   };
 
@@ -178,100 +173,205 @@ export default function StudentResults() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <Card className="border border-border">
+            <Card className="border border-border bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 shadow-md transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
+              <div className="absolute top-2 right-2 opacity-10 text-primary group-hover:scale-110 transition-transform">
+                <BookmarkIcon className="h-16 w-16" />
+              </div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-2xl">{results.length}</CardTitle>
-                <CardDescription>Всего пройдено тестов</CardDescription>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <BookmarkIcon className="h-4 w-4 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl animate-pulse-subtle">
+                    {displayResults.length}
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-sm">
+                  Всего пройдено тестов
+                </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border border-border">
+            <Card className="border border-border bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 shadow-md transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
+              <div className="absolute top-2 right-2 opacity-10 text-blue-500 group-hover:scale-110 transition-transform">
+                <BarChartIcon className="h-16 w-16" />
+              </div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-2xl text-success">
-                  {results.length > 0
-                    ? Math.round(
-                        (results.reduce(
-                          (sum, result) => sum + result.score,
-                          0
-                        ) /
-                          results.reduce(
-                            (sum, result) => sum + result.maxScore,
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
+                    <BarChartIcon className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    {displayResults.length > 0 ? (
+                      <div className="flex items-center">
+                        {getScoreBadge(
+                          displayResults.reduce(
+                            (sum, result) => sum + result.score,
                             0
-                          )) *
-                          100
-                      )
-                    : 0}
-                  %
-                </CardTitle>
-                <CardDescription>Средний результат</CardDescription>
+                          ) / displayResults.length
+                        )}
+                        <span className="ml-2 text-sm">
+                          (
+                          {(
+                            displayResults.reduce(
+                              (sum, result) => sum + result.score,
+                              0
+                            ) / displayResults.length
+                          ).toFixed(1)}
+                          )
+                        </span>
+                      </div>
+                    ) : (
+                      "Нет данных"
+                    )}
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-sm">
+                  Средняя оценка
+                </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border border-border">
+            <Card className="border border-border bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 shadow-md transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
+              <div className="absolute top-2 right-2 opacity-10 text-amber-500 group-hover:scale-110 transition-transform">
+                <StarIcon className="h-16 w-16" />
+              </div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-2xl">
-                  {results.length > 0
-                    ? Math.max(
-                        ...results.map(
-                          (result) => (result.score / result.maxScore) * 100
-                        )
-                      )
-                    : 0}
-                  %
-                </CardTitle>
-                <CardDescription>Лучший результат</CardDescription>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-amber-100 dark:bg-amber-900 p-2 rounded-full">
+                    <StarIcon className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    {displayResults.length > 0 ? (
+                      <div className="flex items-center">
+                        {getScoreBadge(
+                          Math.max(
+                            ...displayResults.map((result) => result.score)
+                          )
+                        )}
+                        <span className="ml-2 text-sm">
+                          (
+                          {Math.max(
+                            ...displayResults.map((result) => result.score)
+                          ).toFixed(1)}
+                          )
+                        </span>
+                      </div>
+                    ) : (
+                      "Нет данных"
+                    )}
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-sm">
+                  Лучшая оценка
+                </CardDescription>
               </CardHeader>
             </Card>
           </div>
 
-          <Card className="border border-border">
-            <CardHeader>
-              <CardTitle>История результатов</CardTitle>
-              <CardDescription>
-                Все пройденные вами тесты и результаты
-              </CardDescription>
+          <Card className="border border-border shadow-md hover:shadow-lg transition-all duration-300">
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MagnifyingGlassIcon className="h-5 w-5 text-primary" />
+                    История результатов
+                  </CardTitle>
+                  <CardDescription>
+                    Все пройденные вами тесты и результаты
+                  </CardDescription>
+                </div>
+                {displayResults.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/5 text-primary"
+                  >
+                    {displayResults.length}{" "}
+                    {displayResults.length === 1
+                      ? "запись"
+                      : displayResults.length < 5
+                      ? "записи"
+                      : "записей"}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {isLoading ? (
-                <div className="text-center py-4">Загрузка результатов...</div>
+                <div className="text-center py-8 flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-muted-foreground">
+                    Загрузка результатов...
+                  </p>
+                </div>
               ) : (
-                <div className="rounded-md border">
+                <div>
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/20">
                       <TableRow>
-                        <TableHead>Название теста</TableHead>
-                        <TableHead>Категория</TableHead>
-                        <TableHead>Дата</TableHead>
-                        <TableHead>Время</TableHead>
-                        <TableHead>Результат</TableHead>
-                        <TableHead>Оценка</TableHead>
-                        <TableHead className="text-right">Действия</TableHead>
+                        <TableHead className="font-semibold">
+                          Название теста
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          Категория
+                        </TableHead>
+                        <TableHead className="font-semibold">Дата</TableHead>
+                        <TableHead className="font-semibold">
+                          Результат
+                        </TableHead>
+                        <TableHead className="font-semibold">Оценка</TableHead>
+                        <TableHead className="text-right font-semibold">
+                          Действия
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {results.map((result) => (
-                        <TableRow key={result.id}>
-                          <TableCell className="font-medium">
+                      {displayResults.map((result) => (
+                        <TableRow
+                          key={result.id}
+                          className="group hover:bg-muted/40 transition-colors"
+                        >
+                          <TableCell className="font-medium text-primary">
                             {result.quizTitle}
                           </TableCell>
-                          <TableCell>{result.category}</TableCell>
-                          <TableCell>{formatDate(result.date)}</TableCell>
-                          <TableCell>{result.timeSpent}</TableCell>
-                          <TableCell
-                            className={getScoreColor(
-                              result.score,
-                              result.maxScore
+                          <TableCell>
+                            {result.category ? (
+                              <Badge variant="outline" className="font-normal">
+                                {result.category}
+                              </Badge>
+                            ) : (
+                              "—"
                             )}
-                          >
-                            {result.score} / {result.maxScore}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(result.date)}
                           </TableCell>
                           <TableCell>
-                            {getScoreBadge(result.score, result.maxScore)}
+                            <div className="flex items-center">
+                              <span className="font-medium">
+                                {result.correctAnswers}
+                              </span>
+                              <span className="mx-1 text-muted-foreground">
+                                /
+                              </span>
+                              <span>{result.totalQuestions}</span>
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                (
+                                {Math.round(
+                                  (result.correctAnswers /
+                                    result.totalQuestions) *
+                                    100
+                                )}
+                                %)
+                              </span>
+                            </div>
                           </TableCell>
+                          <TableCell>{getScoreBadge(result.score)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
                               size="sm"
+                              className="group-hover:bg-primary/10 transition-colors"
                               onClick={() =>
                                 navigate(`/results/${result.quizId}`)
                               }
@@ -281,10 +381,28 @@ export default function StudentResults() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {results.length === 0 && (
+                      {displayResults.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center">
-                            Вы еще не прошли ни одного теста
+                          <TableCell colSpan={6}>
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                              <div className="bg-muted/30 p-3 rounded-full mb-4">
+                                <Cross2Icon className="h-10 w-10 text-muted-foreground/50" />
+                              </div>
+                              <p className="text-lg font-medium mb-1">
+                                Тесты еще не пройдены
+                              </p>
+                              <p className="text-muted-foreground max-w-md">
+                                Вы пока не прошли ни одного теста. Перейдите в
+                                раздел доступных тестов, чтобы начать свое
+                                обучение.
+                              </p>
+                              <Button
+                                onClick={() => navigate("/student/quizzes")}
+                                className="mt-4"
+                              >
+                                Перейти к тестам
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )}

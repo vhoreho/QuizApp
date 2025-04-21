@@ -1,166 +1,104 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, UserRole } from "../../lib/types";
+import { UserRole } from "../../lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
-import api from "../../api/axiosConfig";
-
-interface Quiz {
-  id: number;
-  title: string;
-  description: string;
-  createdBy: string;
-  questionsCount: number;
-  estimatedTime: string;
-  difficulty: "easy" | "medium" | "hard";
-  category: string;
-}
+import { QuizCard } from "@/components/quiz/QuizCard";
+import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
+import {
+  useAvailableQuizzes,
+  useStudentResults,
+} from "@/hooks/queries/useQuizzes";
 
 export default function StudentQuizzes() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([]);
+
+  // Проверка аутентификации напрямую
+  const userJson = localStorage.getItem("user");
+  const token = localStorage.getItem("token");
+
+  let parsedUser = null;
+  try {
+    if (userJson) {
+      parsedUser = JSON.parse(userJson);
+    }
+  } catch (error) {
+    console.error("Error parsing user JSON:", error);
+  }
+
+  if (!userJson || !token) {
+    useEffect(() => {
+      navigate("/login");
+    }, []);
+    return <div>Redirecting to login...</div>;
+  }
+
+  // Используем хук для получения информации о пользователе
+  const { user, isLoading: isUserLoading } = useRequireRole([UserRole.STUDENT]);
+  const logoutMutation = useLogout();
+
+  // Запрашиваем данные о доступных тестах
+  const { data: quizzes, isLoading: isQuizzesLoading } = useAvailableQuizzes();
+  // Получаем результаты тестов пользователя
+  const { data: results, isLoading: isResultsLoading } = useStudentResults();
+
+  const [filteredQuizzes, setFilteredQuizzes] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const userJson = localStorage.getItem("user");
-    if (!userJson) {
-      navigate("/login");
-      return;
-    }
-
-    const user = JSON.parse(userJson) as User;
-    if (user.role !== UserRole.STUDENT) {
-      navigate("/login");
-      return;
-    }
-
-    setCurrentUser(user);
-    fetchQuizzes();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredQuizzes(quizzes);
-    } else {
-      const filtered = quizzes.filter(
-        (quiz) =>
-          quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          quiz.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredQuizzes(filtered);
+    if (quizzes) {
+      if (searchTerm.trim() === "") {
+        setFilteredQuizzes(quizzes);
+      } else {
+        const filtered = quizzes.filter(
+          (quiz) =>
+            quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            ((quiz as any).category &&
+              (quiz as any).category
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase()))
+        );
+        setFilteredQuizzes(filtered);
+      }
     }
   }, [searchTerm, quizzes]);
 
-  const fetchQuizzes = async () => {
-    setIsLoading(true);
-    try {
-      // In a real application, this would fetch from your API
-      // const response = await api.get("/student/available-quizzes");
-      // setQuizzes(response.data);
-
-      // Mock data for demonstration
-      setQuizzes([
-        {
-          id: 1,
-          title: "Основы JavaScript",
-          description:
-            "Тест на знание основ JavaScript, включая переменные, типы данных и функции",
-          createdBy: "Иван Преподаватель",
-          questionsCount: 10,
-          estimatedTime: "15 мин",
-          difficulty: "easy",
-          category: "JavaScript",
-        },
-        {
-          id: 2,
-          title: "Алгоритмы и структуры данных",
-          description: "Тест на знание базовых алгоритмов и структур данных",
-          createdBy: "Мария Иванова",
-          questionsCount: 8,
-          estimatedTime: "20 мин",
-          difficulty: "medium",
-          category: "Алгоритмы",
-        },
-        {
-          id: 3,
-          title: "Основы HTML и CSS",
-          description: "Проверка знаний по основам веб-разработки",
-          createdBy: "Иван Преподаватель",
-          questionsCount: 15,
-          estimatedTime: "25 мин",
-          difficulty: "easy",
-          category: "Веб-разработка",
-        },
-        {
-          id: 4,
-          title: "React Основы",
-          description: "Тест на знание основ библиотеки React",
-          createdBy: "Мария Иванова",
-          questionsCount: 12,
-          estimatedTime: "30 мин",
-          difficulty: "medium",
-          category: "JavaScript",
-        },
-        {
-          id: 5,
-          title: "Продвинутый JavaScript",
-          description: "Тест на знание продвинутых концепций JavaScript",
-          createdBy: "Иван Преподаватель",
-          questionsCount: 10,
-          estimatedTime: "40 мин",
-          difficulty: "hard",
-          category: "JavaScript",
-        },
-      ]);
-    } catch (err) {
-      console.error("Error fetching quizzes:", err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setCurrentUser(null);
-    navigate("/login");
+  // Проверяем, прошел ли пользователь тест
+  const hasUserTakenQuiz = (quizId: number) => {
+    if (!results) return false;
+    return results.some((result) => result.quizId === quizId);
   };
 
-  const getDifficultyBadge = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return <Badge variant="success">Легкий</Badge>;
-      case "medium":
-        return <Badge>Средний</Badge>;
-      case "hard":
-        return <Badge variant="destructive">Сложный</Badge>;
-      default:
-        return <Badge variant="outline">Неизвестно</Badge>;
-    }
-  };
+  const isLoading = isUserLoading || isQuizzesLoading || isResultsLoading;
 
-  if (!currentUser) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-t-4 border-primary border-solid rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
+
+  // Use the actual quizzes data
+  const displayQuizzes =
+    filteredQuizzes && filteredQuizzes.length > 0
+      ? filteredQuizzes
+      : quizzes || [];
+  const hasQuizzes = displayQuizzes.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser} onLogout={handleLogout} />
+      <Header user={user || parsedUser} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
@@ -194,68 +132,42 @@ export default function StudentQuizzes() {
             </div>
           </div>
 
-          {isLoading ? (
-            <div className="text-center py-4">Загрузка тестов...</div>
-          ) : (
+          {hasQuizzes ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredQuizzes.map((quiz) => (
-                <Card
+              {displayQuizzes.map((quiz) => (
+                <QuizCard
                   key={quiz.id}
-                  className="border border-border flex flex-col"
-                >
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle>{quiz.title}</CardTitle>
-                      {getDifficultyBadge(quiz.difficulty)}
-                    </div>
-                    <CardDescription>{quiz.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex justify-between">
-                        <span>Категория:</span>
-                        <span className="font-medium text-foreground">
-                          {quiz.category}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Вопросов:</span>
-                        <span className="font-medium text-foreground">
-                          {quiz.questionsCount}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Время:</span>
-                        <span className="font-medium text-foreground">
-                          {quiz.estimatedTime}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Автор:</span>
-                        <span className="font-medium text-foreground">
-                          {quiz.createdBy}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      className="w-full"
-                      onClick={() => navigate(`/quiz/${quiz.id}`)}
-                    >
-                      Начать тест
-                    </Button>
-                  </CardFooter>
-                </Card>
+                  quiz={quiz}
+                  variant="student"
+                  userRole={UserRole.STUDENT}
+                  onTakeQuiz={(id) => navigate(`/quiz/${id}`)}
+                  hasTaken={hasUserTakenQuiz(quiz.id)}
+                />
               ))}
-
-              {filteredQuizzes.length === 0 && (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-muted-foreground">
-                    Тесты не найдены. Пожалуйста, измените параметры поиска.
-                  </p>
-                </div>
-              )}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="mb-4 text-muted-foreground">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-12 w-12 mx-auto"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-medium mb-2">Тесты не найдены</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                На данный момент нет доступных тестов для прохождения.
+                Попробуйте проверить позже.
+              </p>
             </div>
           )}
         </div>

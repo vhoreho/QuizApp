@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Request, Patch, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -9,6 +9,8 @@ import { ResultsService } from '../results/results.service';
 import { CreateQuizDto } from '../quizzes/dto/create-quiz.dto';
 import { CreateQuestionDto } from '../questions/dto/create-question.dto';
 import { UpdateQuestionDto } from '../questions/dto/update-question.dto';
+import { UpdateQuizStatusDto } from '../quizzes/dto/update-quiz-status.dto';
+import { UpdateQuizDto } from '../quizzes/dto/update-quiz.dto';
 
 @Controller('teacher')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,6 +46,26 @@ export class TeacherController {
     return this.quizzesService.remove(+id);
   }
 
+  @Patch('quizzes/:id/status')
+  updateQuizStatus(
+    @Param('id') id: string,
+    @Body() updateQuizStatusDto: UpdateQuizStatusDto,
+    @Request() req
+  ) {
+    // Additional check could be added to ensure the teacher owns this quiz
+    return this.quizzesService.updateStatus(+id, updateQuizStatusDto);
+  }
+
+  @Patch('quizzes/:id')
+  updateQuiz(
+    @Param('id') id: string,
+    @Body() updateQuizDto: UpdateQuizDto,
+    @Request() req
+  ) {
+    const teacherId = req.user.id;
+    return this.quizzesService.update(+id, updateQuizDto, teacherId);
+  }
+
   // Question management
   @Post('quizzes/:quizId/questions')
   addQuestion(
@@ -68,37 +90,62 @@ export class TeacherController {
 
   // Quiz results
   @Get('quizzes/:id/results')
-  getQuizResults(@Param('id') id: string) {
-    return this.resultsService.findByQuizId(+id);
+  getQuizResults(
+    @Param('id') id: string,
+    @Query('includePractice') includePractice?: boolean
+  ) {
+    return this.resultsService.findByQuizId(+id, includePractice);
   }
 
   @Get('quizzes/:id/statistics')
-  getQuizStatistics(@Param('id') id: string) {
-    return this.getQuizStats(+id);
+  getQuizStatistics(
+    @Param('id') id: string,
+    @Query('includePractice') includePractice?: boolean
+  ) {
+    return this.getQuizStats(+id, includePractice);
   }
 
-  private async getQuizStats(quizId: number) {
-    const results = await this.resultsService.findByQuizId(quizId);
-    const averageScore = await this.resultsService.getAverageScoreByQuiz(quizId);
+  @Get('results')
+  getMyResults(
+    @Request() req,
+    @Query('username') username?: string,
+    @Query('quizTitle') quizTitle?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('includePractice') includePractice?: boolean,
+  ) {
+    const teacherId = req.user.id;
+    return this.resultsService.findByTeacherId(teacherId, {
+      username,
+      quizTitle,
+      dateFrom,
+      dateTo,
+      includePractice,
+    });
+  }
+
+  private async getQuizStats(quizId: number, includePractice: boolean = false) {
+    const results = await this.resultsService.findByQuizId(quizId, includePractice);
+    const averageScore = await this.resultsService.getAverageScoreByQuiz(quizId, includePractice);
 
     const scores = results.map(result => result.score);
-    const passRate = scores.filter(score => score >= 60).length / (scores.length || 1) * 100;
+    const passRate = scores.filter(score => score >= 6).length / (scores.length || 1) * 100;
 
     // Calculate score distribution
     const distribution = {
-      '0-20': 0,
-      '21-40': 0,
-      '41-60': 0,
-      '61-80': 0,
-      '81-100': 0,
+      '0-2': 0,
+      '2.1-4': 0,
+      '4.1-6': 0,
+      '6.1-8': 0,
+      '8.1-10': 0,
     };
 
     scores.forEach(score => {
-      if (score <= 20) distribution['0-20']++;
-      else if (score <= 40) distribution['21-40']++;
-      else if (score <= 60) distribution['41-60']++;
-      else if (score <= 80) distribution['61-80']++;
-      else distribution['81-100']++;
+      if (score <= 2) distribution['0-2']++;
+      else if (score <= 4) distribution['2.1-4']++;
+      else if (score <= 6) distribution['4.1-6']++;
+      else if (score <= 8) distribution['6.1-8']++;
+      else distribution['8.1-10']++;
     });
 
     return {
@@ -106,7 +153,7 @@ export class TeacherController {
       averageScore,
       passRate,
       highestScore: Math.max(...(scores.length ? scores : [0])),
-      lowestScore: Math.min(...(scores.length ? scores : [100])),
+      lowestScore: Math.min(...(scores.length ? scores : [10])),
       distribution,
     };
   }

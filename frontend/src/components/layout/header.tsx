@@ -54,7 +54,7 @@ export function Header({ user, onLogout }: HeaderProps) {
               <Link to="/profile">
                 <Button variant="ghost" size="sm" className="flex items-center">
                   <PersonIcon className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">{user.name}</span>
+                  <span className="hidden sm:inline">{user?.username}</span>
                 </Button>
               </Link>
 

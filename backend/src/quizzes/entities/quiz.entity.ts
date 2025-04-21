@@ -21,9 +21,12 @@ export class Quiz {
   @Column({ name: 'created_by_id' })
   createdById: number;
 
-  @OneToMany(() => Question, question => question.quiz)
+  @Column({ default: false })
+  isPublished: boolean;
+
+  @OneToMany(() => Question, question => question.quiz, { cascade: true })
   questions: Question[];
 
-  @OneToMany(() => Result, result => result.quiz)
+  @OneToMany(() => Result, result => result.quiz, { cascade: true })
   results: Result[];
 } 

@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
 import CreateQuizPage from "@/pages/CreateQuizPage";
+import EditQuizPage from "@/pages/EditQuizPage";
 import TakeQuizPage from "@/pages/TakeQuizPage";
 import ResultsPage from "@/pages/ResultsPage";
 import Login from "@/pages/Login";
@@ -14,6 +15,8 @@ import NotAuthorized from "@/pages/NotAuthorized";
 import NotFound from "@/pages/NotFound";
 import QuizManagement from "@/pages/admin/QuizManagement";
 import Analytics from "@/pages/admin/Analytics";
+import AdminQuizResultsPage from "@/pages/admin/QuizResultsPage";
+import AdminResultsPage from "@/pages/admin/ResultsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useEffect } from "react";
 import { authApi } from "./api/auth";
@@ -26,7 +29,8 @@ import TeacherQuestions from "@/pages/teacher/Questions";
 import StudentQuizzes from "@/pages/student/Quizzes";
 import StudentResults from "@/pages/student/Results";
 import ProfilePage from "@/pages/ProfilePage";
-import StudentProgress from "@/pages/student/Progress";
+import StudentProgress from "./pages/student/Progress";
+import ImportQuizPage from "./pages/ImportQuizPage";
 
 function App() {
   const navigate = useNavigate();
@@ -93,6 +97,22 @@ function App() {
           }
         />
         <Route
+          path="/admin/quizzes/:quizId/results"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <AdminQuizResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/results"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <AdminResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/analytics"
           element={
             <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
@@ -139,6 +159,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={[UserRole.TEACHER]}>
               <TeacherAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/quizzes/:quizId/results"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.TEACHER]}>
+              <AdminQuizResultsPage />
             </ProtectedRoute>
           }
         />
@@ -195,7 +223,36 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="quiz/:quizId" element={<TakeQuizPage />} />
+          <Route
+            path="edit-quiz/:id"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.TEACHER, UserRole.ADMIN]}>
+                <EditQuizPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="import-quiz"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.TEACHER, UserRole.ADMIN]}>
+                <ImportQuizPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="quiz/:id"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  UserRole.STUDENT,
+                  UserRole.TEACHER,
+                  UserRole.ADMIN,
+                ]}
+              >
+                <TakeQuizPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="results/:quizId" element={<ResultsPage />} />
         </Route>
 
