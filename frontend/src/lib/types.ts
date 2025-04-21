@@ -1,32 +1,33 @@
 export enum UserRole {
   ADMIN = 'administrator',
   TEACHER = 'teacher',
-  STUDENT = 'student',
+  STUDENT = 'student'
 }
 
 export interface User {
   id: number;
-  name: string;
   username: string;
   email: string;
   role: UserRole;
+  firstName?: string;
+  lastName?: string;
 }
 
 export enum QuestionType {
-  SINGLE_CHOICE = 'single_choice',
-  MULTIPLE_CHOICE = 'multiple_choice',
-  OPEN_ENDED = 'open_ended',
-  MATCHING = 'matching',
-  ORDERING = 'ordering',
+  SINGLE_CHOICE = 'SINGLE_CHOICE',
+  MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
+  MATCHING = 'MATCHING',
+  TRUE_FALSE = 'TRUE_FALSE'
 }
 
 export interface Question {
   id: number;
-  quizId: number;
   text: string;
   type: QuestionType;
-  options?: string[];
-  correctAnswer?: string | string[];
+  options: string[];
+  correctAnswers?: string[];
+  matchingPairs?: { [key: string]: string };
+  quizId: number;
   points: number;
   order: number;
 }
@@ -44,12 +45,22 @@ export interface Quiz {
 }
 
 export interface Answer {
-  id: number;
   questionId: number;
-  userId: number;
-  answer: string | string[];
-  isCorrect?: boolean;
-  points?: number;
+  questionType: QuestionType;
+  selectedAnswer?: string;
+  selectedAnswers?: string[];
+  matchingPairs?: { [key: string]: string };
+  textAnswer?: string;
+}
+
+export interface QuizResult {
+  quizId: number;
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  totalPoints?: number;
+  maxPossiblePoints?: number;
+  partialPoints?: number;
 }
 
 export interface Result {
@@ -57,8 +68,14 @@ export interface Result {
   quizId: number;
   userId: number;
   score: number;
+  correctAnswers: number;
+  totalQuestions: number;
   totalPoints: number;
-  completedAt: string;
+  maxPossiblePoints: number;
+  createdAt: string;
+  isPractice?: boolean;
+  user?: User;
+  quiz?: Quiz;
 }
 
 export interface Group {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { QuestionType } from "./types";
 
 // Quiz form schema
 export const quizFormSchema = z.object({
@@ -22,7 +23,11 @@ export type QuestionFormValues = z.infer<typeof questionFormSchema>;
 // Submit quiz schema
 export const submitAnswerSchema = z.object({
   questionId: z.number(),
-  selectedAnswer: z.string().min(1, { message: "An answer must be selected" }),
+  questionType: z.nativeEnum(QuestionType),
+  selectedAnswer: z.string().optional(),
+  selectedAnswers: z.array(z.string()).optional(),
+  matchingPairs: z.record(z.string()).optional(),
+  textAnswer: z.string().optional(),
 });
 
 export type SubmitAnswerValues = z.infer<typeof submitAnswerSchema>;

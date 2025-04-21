@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, UserRole } from "../../lib/types";
+import { UserRole } from "../../lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
@@ -12,45 +12,41 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import { toast } from "../../components/ui/use-toast";
 import api from "../../api/axiosConfig";
 
-interface CategoryProgress {
+// Типы данных
+interface CategoryStats {
   category: string;
   quizzesTaken: number;
   averageScore: number;
   totalQuizzes: number;
 }
 
-interface RecentActivity {
+interface RecentResult {
   id: number;
-  type: "quiz_completed" | "badge_earned" | "level_up";
-  title: string;
-  description: string;
+  quizTitle: string;
+  score: number;
+  maxScore: number;
   date: string;
 }
 
 interface ProgressData {
-  totalQuizzesTaken: number;
+  completedQuizzes: number;
   averageScore: number;
-  currentStreak: number;
-  longestStreak: number;
-  level: number;
-  xp: number;
-  xpToNextLevel: number;
-  categoryProgress: CategoryProgress[];
-  recentActivities: RecentActivity[];
-  badges: {
-    id: number;
-    name: string;
-    description: string;
-    earnedAt: string;
-  }[];
+  categoryStats: CategoryStats[];
+  recentResults: RecentResult[];
 }
 
 export default function StudentProgress() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [progressData, setProgressData] = useState<ProgressData>({
+    completedQuizzes: 0,
+    averageScore: 0,
+    categoryStats: [],
+    recentResults: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,124 +56,35 @@ export default function StudentProgress() {
       return;
     }
 
-    const user = JSON.parse(userJson) as User;
+    const user = JSON.parse(userJson);
     if (user.role !== UserRole.STUDENT) {
       navigate("/login");
       return;
     }
 
     setCurrentUser(user);
-    fetchProgressData();
+    fetchProgress();
   }, [navigate]);
 
-  const fetchProgressData = async () => {
+  const fetchProgress = async () => {
     setIsLoading(true);
     try {
-      // In a real application, this would fetch from your API
-      // const response = await api.get("/student/progress");
-      // setProgressData(response.data);
-
-      // Mock data for demonstration
-      setProgressData({
-        totalQuizzesTaken: 23,
-        averageScore: 76,
-        currentStreak: 4,
-        longestStreak: 7,
-        level: 5,
-        xp: 1250,
-        xpToNextLevel: 2000,
-        categoryProgress: [
-          {
-            category: "JavaScript",
-            quizzesTaken: 10,
-            averageScore: 82,
-            totalQuizzes: 15,
-          },
-          {
-            category: "HTML/CSS",
-            quizzesTaken: 5,
-            averageScore: 90,
-            totalQuizzes: 8,
-          },
-          {
-            category: "Алгоритмы",
-            quizzesTaken: 3,
-            averageScore: 65,
-            totalQuizzes: 10,
-          },
-          {
-            category: "React",
-            quizzesTaken: 4,
-            averageScore: 72,
-            totalQuizzes: 12,
-          },
-          {
-            category: "Базы данных",
-            quizzesTaken: 1,
-            averageScore: 60,
-            totalQuizzes: 5,
-          },
-        ],
-        recentActivities: [
-          {
-            id: 1,
-            type: "quiz_completed",
-            title: "Тест пройден: Основы JavaScript",
-            description: "Результат: 8/10 (80%)",
-            date: "2023-10-15T14:30:00Z",
-          },
-          {
-            id: 2,
-            type: "badge_earned",
-            title: "Получен значок: JavaScript Новичок",
-            description: "Пройдите 5 тестов по JavaScript",
-            date: "2023-10-14T11:20:00Z",
-          },
-          {
-            id: 3,
-            type: "quiz_completed",
-            title: "Тест пройден: Алгоритмы сортировки",
-            description: "Результат: 6/8 (75%)",
-            date: "2023-10-12T16:45:00Z",
-          },
-          {
-            id: 4,
-            type: "level_up",
-            title: "Повышение уровня!",
-            description: "Достигнут уровень 5",
-            date: "2023-10-10T09:15:00Z",
-          },
-          {
-            id: 5,
-            type: "quiz_completed",
-            title: "Тест пройден: React Основы",
-            description: "Результат: 9/12 (75%)",
-            date: "2023-10-08T13:30:00Z",
-          },
-        ],
-        badges: [
-          {
-            id: 1,
-            name: "JavaScript Новичок",
-            description: "Пройдите 5 тестов по JavaScript",
-            earnedAt: "2023-10-14T11:20:00Z",
-          },
-          {
-            id: 2,
-            name: "HTML Мастер",
-            description: "Получите более 90% в 3 тестах по HTML",
-            earnedAt: "2023-09-20T15:45:00Z",
-          },
-          {
-            id: 3,
-            name: "Первые шаги",
-            description: "Пройдите свой первый тест",
-            earnedAt: "2023-09-05T10:30:00Z",
-          },
-        ],
+      // Запрос реальных данных с сервера
+      const response = await api.get("/student/progress");
+      setProgressData(
+        response.data || {
+          completedQuizzes: 0,
+          averageScore: 0,
+          categoryStats: [],
+          recentResults: [],
+        }
+      );
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось загрузить данные о прогрессе",
       });
-    } catch (err) {
-      console.error("Error fetching progress data:", err);
     } finally {
       setIsLoading(false);
     }
@@ -195,31 +102,20 @@ export default function StudentProgress() {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  const getCategoryProgressColor = (progress: number) => {
-    if (progress >= 80) return "bg-success";
-    if (progress >= 60) return "bg-primary";
-    if (progress >= 40) return "bg-secondary";
-    return "bg-destructive";
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "quiz_completed":
-        return "📝";
-      case "badge_earned":
-        return "🏆";
-      case "level_up":
-        return "⭐";
-      default:
-        return "📌";
-    }
-  };
-
-  if (!currentUser || !progressData) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-t-4 border-primary border-solid rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Загрузка...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -240,17 +136,16 @@ export default function StudentProgress() {
             <div>
               <h1 className="text-3xl font-bold">Мой прогресс</h1>
               <p className="text-muted-foreground">
-                Отслеживание вашего обучения и достижений
+                Отслеживание успеваемости и активности
               </p>
             </div>
           </div>
 
-          {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card className="border border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-2xl">
-                  {progressData.totalQuizzesTaken}
+                  {progressData.completedQuizzes}
                 </CardTitle>
                 <CardDescription>Пройдено тестов</CardDescription>
               </CardHeader>
@@ -259,158 +154,116 @@ export default function StudentProgress() {
             <Card className="border border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-2xl">
-                  {progressData.averageScore}%
+                  {progressData.averageScore
+                    ? `${progressData.averageScore.toFixed(1)}%`
+                    : "0%"}
                 </CardTitle>
                 <CardDescription>Средний результат</CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="border border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-2xl">
-                  Уровень {progressData.level}
-                </CardTitle>
-                <CardDescription>
-                  {progressData.xp} / {progressData.xpToNextLevel} XP
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="w-full bg-muted rounded-full h-2.5">
-                  <div
-                    className="bg-primary h-2.5 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (progressData.xp / progressData.xpToNextLevel) * 100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-2xl">
-                  {progressData.currentStreak} дней
-                </CardTitle>
-                <CardDescription>
-                  Текущая серия ({progressData.longestStreak} макс.)
-                </CardDescription>
-              </CardHeader>
-            </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Category Progress */}
-            <Card className="border border-border lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border border-border">
               <CardHeader>
                 <CardTitle>Прогресс по категориям</CardTitle>
-                <CardDescription>
-                  Ваш прогресс по различным категориям тестов
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {progressData.categoryProgress.map((category) => (
-                    <div key={category.category}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">
-                          {category.category}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {category.quizzesTaken} из {category.totalQuizzes}{" "}
-                          тестов
-                        </span>
+                  {progressData.categoryStats &&
+                    progressData.categoryStats.map((category) => (
+                      <div key={category.category}>
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-sm font-medium">
+                            {category.category}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {category.quizzesTaken} / {category.totalQuizzes}{" "}
+                            тестов
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <div
+                            className="h-2 rounded-full bg-primary-foreground overflow-hidden"
+                            style={{
+                              position: "relative",
+                              background: "rgb(229, 231, 235)",
+                            }}
+                          >
+                            <div
+                              className="h-full bg-primary"
+                              style={{
+                                width: `${
+                                  (category.quizzesTaken /
+                                    category.totalQuizzes) *
+                                  100
+                                }%`,
+                                transition: "width 0.3s ease",
+                              }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Средний балл: {category.averageScore.toFixed(1)}%
+                          </p>
+                        </div>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2.5">
-                        <div
-                          className={`${getCategoryProgressColor(
-                            category.averageScore
-                          )} h-2.5 rounded-full`}
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              (category.quizzesTaken / category.totalQuizzes) *
-                                100
-                            )}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          Средний балл: {category.averageScore}%
-                        </span>
-                      </div>
+                    ))}
+
+                  {(!progressData.categoryStats ||
+                    progressData.categoryStats.length === 0) && (
+                    <div className="text-center py-6 text-muted-foreground">
+                      Нет данных о прогрессе по категориям
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Badges */}
             <Card className="border border-border">
               <CardHeader>
-                <CardTitle>Мои достижения</CardTitle>
-                <CardDescription>Полученные значки и награды</CardDescription>
+                <CardTitle>Недавние результаты</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {progressData.badges.map((badge) => (
-                    <div
-                      key={badge.id}
-                      className="flex items-start p-3 rounded-lg border border-border"
-                    >
-                      <div className="flex-shrink-0 mr-3 bg-primary/10 rounded-full p-2">
-                        <span className="text-xl">🏆</span>
+                  {progressData.recentResults &&
+                    progressData.recentResults.map((result) => (
+                      <div key={result.id} className="flex border-b pb-3">
+                        <div className="flex-grow">
+                          <h4 className="font-medium">{result.quizTitle}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Результат: {result.score} / {result.maxScore}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDate(result.date)}
+                          </p>
+                        </div>
+                        <div>
+                          <Badge
+                            variant={
+                              result.score / result.maxScore >= 0.7
+                                ? "success"
+                                : "destructive"
+                            }
+                          >
+                            {((result.score / result.maxScore) * 100).toFixed(
+                              0
+                            )}
+                            %
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium">{badge.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {badge.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Получено: {formatDate(badge.earnedAt)}
-                        </p>
-                      </div>
+                    ))}
+
+                  {(!progressData.recentResults ||
+                    progressData.recentResults.length === 0) && (
+                    <div className="text-center py-6 text-muted-foreground">
+                      Нет данных о недавних результатах
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Recent Activity */}
-          <Card className="border border-border mt-6">
-            <CardHeader>
-              <CardTitle>Недавняя активность</CardTitle>
-              <CardDescription>
-                Ваша последняя активность в системе
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {progressData.recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex">
-                    <div className="flex-shrink-0 mr-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
-                        <span>{getActivityIcon(activity.type)}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{activity.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDate(activity.date)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </main>
 

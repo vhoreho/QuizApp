@@ -9,20 +9,36 @@ const api = axios.create({
   },
 });
 
-// Add request logging
-api.interceptors.request.use(config => {
-  const method = config.method?.toUpperCase() || 'GET';
-  console.log(`Making ${method} request to ${config.baseURL}${config.url}`);
-  return config;
-});
+// Keep console logs only for development environment
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-// Add response logging
+// Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    const method = config.method?.toUpperCase() || 'GET';
+
+    if (isDevelopment) {
+      console.log(`Making ${method} request to ${config.baseURL}${config.url}`);
+    }
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add response interceptor
 api.interceptors.response.use(
-  response => {
-    console.log(`Response from ${response.config.url}: ${response.status}`);
+  (response) => {
+    if (isDevelopment) {
+      console.log(`Response from ${response.config.url}: ${response.status}`);
+    }
     return response;
   },
-  error => {
+  (error) => {
     console.error(`API Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
     return Promise.reject(error);
   }

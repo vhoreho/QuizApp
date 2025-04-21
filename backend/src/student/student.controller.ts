@@ -41,6 +41,14 @@ export class StudentController {
     return this.quizzesService.submitQuiz(+id, submitQuizDto, userId);
   }
 
+  // Check if student has already taken a quiz
+  @Get('quizzes/:id/has-taken')
+  async hasUserTakenQuiz(@Param('id') id: string, @Request() req) {
+    const userId = req.user.id;
+    const hasTaken = await this.resultsService.hasUserTakenQuiz(userId, +id);
+    return { hasTaken };
+  }
+
   // Results
   @Get('results')
   getMyResults(@Request() req) {

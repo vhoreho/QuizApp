@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, UserRole } from "../../lib/types";
-import { Header } from "../../components/layout/header";
+import { PageLayout } from "../../components/layout/PageLayout";
 import { Button } from "../../components/ui/button";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import {
@@ -11,8 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { authApi } from "../../api/auth";
 import { adminApi } from "../../api/quizApi";
+import { authApi } from "../../api/auth";
 import { toast } from "../../components/ui/use-toast";
 
 interface DashboardStats {
@@ -25,7 +25,14 @@ interface DashboardStats {
 export default function Analytics() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<any>({
+    totalUsers: 0,
+    newUsers: 0,
+    activeUsers: 0,
+    quizzes: 0,
+    completions: 0,
+    averageScore: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -73,12 +80,6 @@ export default function Analytics() {
     }
   };
 
-  const handleLogout = async () => {
-    await authApi.logout();
-    setCurrentUser(null);
-    navigate("/login");
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -91,8 +92,20 @@ export default function Analytics() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser!} onLogout={handleLogout} />
+    <PageLayout>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/admin/dashboard")}
+            className="mr-2"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">Аналитика</h1>
+        </div>
+      </div>
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
@@ -245,24 +258,6 @@ export default function Analytics() {
           </div>
         </div>
       </main>
-
-      <footer className="border-t border-border bg-background">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Quiz App. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">
-                Terms of Service
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Privacy Policy
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </PageLayout>
   );
 }

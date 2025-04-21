@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 
 export default function NotAuthorized() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center bg-gray-50">
+    <div className="flex h-screen flex-col items-center justify-center ">
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col items-center">
           <ShieldXIcon className="h-12 w-12 text-destructive mb-2" />
