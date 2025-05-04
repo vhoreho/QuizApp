@@ -1,15 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DeepPartial } from 'typeorm';
 import { Question } from './entities/question.entity';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { Answer } from '../answers/entities/answer.entity';
 import { CreateAnswerDto } from '../answers/dto/create-answer.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuestionType } from './enums/question-type.enum';
+import { CreateQuestionsBatchDto } from './dto/create-questions-batch.dto';
+
+interface BatchResult {
+  createdQuestions: Question[];
+  failedQuestions: {
+    index: number;
+    error: string;
+    questionData?: any;
+  }[];
+}
 
 @Injectable()
 export class QuestionsService {
+  private readonly logger = new Logger(QuestionsService.name);
+
   constructor(
     @InjectRepository(Question)
     private questionsRepository: Repository<Question>,
@@ -47,6 +59,110 @@ export class QuestionsService {
     // Так как save может вернуть массив, берем первый элемент,
     // но в данном случае мы сохраняем один объект, поэтому результат должен быть один
     return Array.isArray(savedQuestion) ? savedQuestion[0] : savedQuestion;
+  }
+
+  /**
+   * Создает несколько вопросов одновременно
+   * @param batchDto Объект с quizId и массивом вопросов
+   * @returns Объект с созданными вопросами и информацией о неудачных
+   */
+  async createBatch(batchDto: CreateQuestionsBatchDto): Promise<BatchResult> {
+    const { quizId, questions } = batchDto;
+    const result: BatchResult = {
+      createdQuestions: [],
+      failedQuestions: []
+    };
+
+    if (!questions || !questions.length) {
+      throw new BadRequestException('No questions provided for batch creation');
+    }
+
+    this.logger.log(`Starting batch creation of ${questions.length} questions for quiz ID ${quizId}`);
+
+    // Преобразуем и валидируем каждый вопрос по отдельности
+    const questionEntities: DeepPartial<Question>[] = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      const questionDto = questions[i];
+      try {
+        const questionData: DeepPartial<Question> = {
+          ...questionDto,
+          quizId,
+          // Если порядок не указан, используем индекс
+          order: questionDto.order !== undefined ? questionDto.order : i,
+        };
+
+        // Преобразование данных в зависимости от типа вопроса
+        switch (questionDto.type) {
+          case QuestionType.SINGLE_CHOICE:
+          case QuestionType.TRUE_FALSE:
+            questionData.correctAnswers = [questionDto.correctAnswer];
+            break;
+          case QuestionType.MULTIPLE_CHOICE:
+            // Уже содержит correctAnswers
+            break;
+          case QuestionType.MATCHING:
+            // Сохраняем ключи сопоставления в options, а значения в correctAnswers
+            if (questionDto.matchingPairs) {
+              const keys = Object.keys(questionDto.matchingPairs);
+              const values = Object.values(questionDto.matchingPairs);
+              questionData.options = keys;
+              questionData.correctAnswers = values;
+            }
+            break;
+        }
+
+        // Базовая валидация
+        if (!questionData.text || !questionData.type) {
+          throw new Error('Question must have text and type');
+        }
+
+        questionEntities.push(questionData);
+      } catch (error) {
+        // Логируем ошибку и продолжаем с другими вопросами
+        this.logger.error(`Error processing question at index ${i}: ${error.message}`, error.stack);
+        result.failedQuestions.push({
+          index: i,
+          error: error.message || 'Unknown error',
+          questionData: questionDto
+        });
+      }
+    }
+
+    if (questionEntities.length === 0) {
+      throw new BadRequestException('All questions failed validation');
+    }
+
+    try {
+      // Создаем сущности и сохраняем все вопросы за одну транзакцию
+      const entities = this.questionsRepository.create(questionEntities);
+      result.createdQuestions = await this.questionsRepository.save(entities);
+
+      this.logger.log(`Successfully created ${result.createdQuestions.length} questions for quiz ID ${quizId}`);
+
+      if (result.failedQuestions.length > 0) {
+        this.logger.warn(`Failed to create ${result.failedQuestions.length} questions for quiz ID ${quizId}`);
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error(`Error saving batch questions: ${error.message}`, error.stack);
+      // Если ошибка происходит при сохранении, все вопросы считаются неудачными
+      result.failedQuestions = [
+        ...result.failedQuestions,
+        ...questionEntities.map((q, idx) => ({
+          index: idx,
+          error: error.message || 'Database error',
+          questionData: q
+        }))
+      ];
+      result.createdQuestions = [];
+
+      throw new BadRequestException(
+        `Failed to save questions: ${error.message}`,
+        { cause: result }
+      );
+    }
   }
 
   async findAll(): Promise<Question[]> {

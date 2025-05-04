@@ -1,8 +1,21 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete, HttpStatus, HttpException } from '@nestjs/common';
 import { QuestionsService } from './questions.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { Question } from './entities/question.entity';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { CreateQuestionsBatchDto } from './dto/create-questions-batch.dto';
+
+// Define the interface for batch responses
+interface BatchResponse {
+  success: boolean;
+  totalQuestions: number;
+  createdQuestions: Question[];
+  failedQuestions: {
+    index: number;
+    error: string;
+    questionData?: any;
+  }[];
+}
 
 @Controller('questions')
 export class QuestionsController {
@@ -14,6 +27,36 @@ export class QuestionsController {
     @Body() createQuestionDto: CreateQuestionDto
   ): Promise<Question> {
     return this.questionsService.create(+quizId, createQuestionDto);
+  }
+
+  @Post('batch')
+  async createBatch(@Body() createQuestionsBatchDto: CreateQuestionsBatchDto): Promise<BatchResponse> {
+    try {
+      const result = await this.questionsService.createBatch(createQuestionsBatchDto);
+
+      return {
+        success: true,
+        totalQuestions: createQuestionsBatchDto.questions.length,
+        createdQuestions: result.createdQuestions,
+        failedQuestions: result.failedQuestions
+      };
+    } catch (error) {
+      // Если ошибка содержит информацию о созданных/неудачных вопросах,
+      // возвращаем частичный успех
+      if (error instanceof HttpException && error.getResponse()['cause']) {
+        const cause = error.getResponse()['cause'];
+
+        return {
+          success: false,
+          totalQuestions: createQuestionsBatchDto.questions.length,
+          createdQuestions: cause.createdQuestions || [],
+          failedQuestions: cause.failedQuestions || []
+        };
+      }
+
+      // Иначе пробрасываем ошибку дальше
+      throw error;
+    }
   }
 
   @Get()

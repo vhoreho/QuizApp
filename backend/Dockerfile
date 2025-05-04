@@ -1,10 +1,11 @@
-FROM node:18-alpine
+FROM node:16-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+# First, remove bcrypt and install bcryptjs (a pure JS implementation)
+RUN npm uninstall bcrypt && npm install bcryptjs && npm install
 
 COPY . .
 

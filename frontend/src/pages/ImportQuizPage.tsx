@@ -1,28 +1,19 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { useState } from "react";
 import api from "@/api/axiosConfig";
 import { useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { QuizInfoForm } from "@/components/import/QuizInfoForm";
 import { QuestionImportForm } from "@/components/import/QuestionImportForm";
 import { Question } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 
-enum ImportStep {
-  INFO,
-  QUESTIONS,
-}
-
 export default function ImportQuizPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<ImportStep>(ImportStep.INFO);
-  const [quizId, setQuizId] = useState<string>("");
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
@@ -33,37 +24,6 @@ export default function ImportQuizPage() {
   const [importProgress, setImportProgress] = useState<number>(0);
   const [importStatus, setImportStatus] = useState<string>("");
 
-  // Function to handle quiz creation (step 1)
-  const handleCreateQuiz = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      // Create the quiz with just title and description
-      const response = await api.post("/quizzes", {
-        title,
-        description,
-      });
-
-      // Store the quiz ID for the next step
-      setQuizId(response.data.id);
-
-      // Move to the next step
-      setStep(ImportStep.QUESTIONS);
-
-      toast({
-        title: "Тест создан!",
-        description: "Теперь вы можете добавить вопросы.",
-      });
-    } catch (error) {
-      console.error("Error creating quiz:", error);
-      setError("Ошибка при создании теста. Пожалуйста, попробуйте еще раз.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Function to handle file change
   const handleFileChange = (file: File) => {
     setFile(file);
@@ -73,7 +33,7 @@ export default function ImportQuizPage() {
 
   // Function to handle file import and question creation
   const handleImportQuestions = async () => {
-    if (!file || !quizId) return;
+    if (!file) return;
 
     setIsLoading(true);
     setError(null);
@@ -87,13 +47,40 @@ export default function ImportQuizPage() {
         try {
           const content = e.target?.result as string;
           let parsedQuestions: Question[] = [];
+          let quizTitle = "Импортированный тест";
+          let quizDescription = "Тест, импортированный из файла";
 
           console.log("File content loaded, type:", fileType);
           setImportStatus("Анализ содержимого файла...");
 
           // Parse the file content based on file type
           if (fileType === "json") {
-            parsedQuestions = parseJsonQuiz(content);
+            try {
+              // Попробуем прочитать JSON и извлечь название и описание, если они есть
+              const jsonData = JSON.parse(content);
+              if (jsonData.title) {
+                quizTitle = jsonData.title;
+                setTitle(quizTitle);
+              }
+              if (jsonData.description) {
+                quizDescription = jsonData.description;
+                setDescription(quizDescription);
+              }
+
+              // Получаем вопросы
+              if (Array.isArray(jsonData.questions)) {
+                parsedQuestions = parseJsonQuiz(content);
+              } else if (Array.isArray(jsonData)) {
+                parsedQuestions = validateQuestions(jsonData);
+              } else {
+                throw new Error(
+                  "Неверный формат JSON: отсутствует массив вопросов"
+                );
+              }
+            } catch (jsonError) {
+              console.error("Error parsing JSON:", jsonError);
+              parsedQuestions = parseJsonQuiz(content);
+            }
           } else if (fileType === "csv") {
             parsedQuestions = parseCsvQuiz(content);
           } else {
@@ -110,52 +97,174 @@ export default function ImportQuizPage() {
           );
           setQuestions(parsedQuestions);
           setImportStatus(
-            `Найдено ${parsedQuestions.length} вопросов. Начинаем импорт...`
+            `Найдено ${parsedQuestions.length} вопросов. Создаем тест...`
           );
 
-          // Create questions one by one
-          let createdCount = 0;
-          const totalQuestions = parsedQuestions.length;
+          try {
+            // First, create the quiz
+            setImportStatus("Создание теста...");
+            setImportProgress(10);
 
-          for (const question of parsedQuestions) {
-            try {
-              await createQuestion(question, quizId);
-              createdCount++;
+            const quizResponse = await api.post("/quizzes", {
+              title: quizTitle,
+              description: quizDescription,
+            });
 
-              // Update progress
-              const progressPercent = Math.round(
-                (createdCount / totalQuestions) * 100
-              );
-              setImportProgress(progressPercent);
-              setImportStatus(
-                `Импортировано ${createdCount} из ${totalQuestions} вопросов (${progressPercent}%)`
-              );
+            const quizId = quizResponse.data.id;
+            setImportStatus(`Тест создан. Импортируем вопросы...`);
+            setImportProgress(30);
 
-              if (createdCount % 5 === 0 || createdCount === totalQuestions) {
-                console.log(
-                  `Создано ${createdCount} из ${totalQuestions} вопросов`
-                );
+            // Map the questions to the format expected by the API
+            const questionsForBatch = parsedQuestions.map((question, index) => {
+              // Базовые данные
+              const questionDto: any = {
+                quizId: Number(quizId),
+                text: question.text,
+                type: question.type,
+                order: question.order || index,
+                points: question.points || 1,
+                options: question.options || [],
+              };
+
+              // В зависимости от типа вопроса добавляем нужные поля
+              if (
+                question.type === "SINGLE_CHOICE" ||
+                question.type === "TRUE_FALSE"
+              ) {
+                // Некоторые вопросы могут иметь правильный ответ в виде строки,
+                // а бэкенд ожидает это поле как correctAnswer
+                questionDto.correctAnswer =
+                  Array.isArray(question.correctAnswers) &&
+                  question.correctAnswers.length > 0
+                    ? question.correctAnswers[0]
+                    : question.options[0] || "";
+              } else if (question.type === "MULTIPLE_CHOICE") {
+                questionDto.correctAnswers = question.correctAnswers || [];
+              } else if (question.type === "MATCHING") {
+                questionDto.matchingPairs = question.matchingPairs || {};
               }
-            } catch (err) {
-              console.error("Failed to create question:", err, question);
-              // Continue with other questions
+
+              return questionDto;
+            });
+
+            // Send batch request
+            setImportStatus("Импорт вопросов...");
+            setImportProgress(50);
+
+            const response = await api.post("/questions/batch", {
+              quizId: Number(quizId),
+              questions: questionsForBatch,
+            });
+
+            // Check response
+            const batchResult = response.data;
+            const createdCount = batchResult.createdQuestions.length;
+            const failedCount = batchResult.failedQuestions.length;
+            const totalQuestions = parsedQuestions.length;
+
+            setImportProgress(100);
+
+            if (failedCount > 0) {
+              // Если есть неудачно созданные вопросы, показываем предупреждение
+              setImportStatus(
+                `Импортировано ${createdCount} из ${totalQuestions} вопросов. ${failedCount} вопросов не удалось импортировать.`
+              );
+
+              // Записываем информацию об ошибках в лог
+              console.warn(
+                "Failed to import some questions:",
+                batchResult.failedQuestions
+              );
+
+              // Если все вопросы не удалось создать, показываем ошибку
+              if (createdCount === 0) {
+                setError(
+                  `Не удалось импортировать ни один вопрос. Проверьте формат данных.`
+                );
+                setIsLoading(false);
+                return;
+              }
+
+              // Показываем тост с предупреждением
+              toast({
+                title: "Тест импортирован с ошибками",
+                description: `Добавлено ${createdCount} из ${totalQuestions} вопросов. ${failedCount} вопросов не удалось импортировать.`,
+                variant: "destructive",
+              });
+            } else {
+              // Если все вопросы успешно созданы
+              setImportStatus(
+                `Тест "${quizTitle}" с ${createdCount} вопросами успешно создан`
+              );
+
+              // Показываем тост с успехом
+              toast({
+                title: "Тест импортирован!",
+                description: `Тест "${quizTitle}" с ${createdCount} вопросами успешно создан.`,
+              });
             }
-          }
 
-          // Show success message
-          toast({
-            title: "Вопросы импортированы!",
-            description: `Добавлено ${createdCount} из ${parsedQuestions.length} вопросов.`,
-          });
+            // Redirect to the appropriate page based on user role after short delay
+            setTimeout(
+              () => {
+                const userRole = localStorage.getItem("userRole");
+                if (userRole === "admin") {
+                  navigate("/admin/quizzes");
+                } else if (userRole === "teacher") {
+                  navigate("/teacher/quizzes");
+                } else {
+                  navigate("/");
+                }
+              },
+              failedCount > 0 ? 1500 : 500
+            ); // Longer delay if there were errors
+          } catch (error: any) {
+            console.error("Error during quiz import:", error);
 
-          // Redirect to the appropriate page based on user role
-          const userRole = localStorage.getItem("userRole");
-          if (userRole === "admin") {
-            navigate("/admin/quizzes");
-          } else if (userRole === "teacher") {
-            navigate("/teacher/quizzes");
-          } else {
-            navigate("/");
+            // Проверяем, есть ли в ответе информация о созданных вопросах
+            if (error.response && error.response.data) {
+              const responseData = error.response.data;
+
+              if (
+                responseData.createdQuestions &&
+                responseData.createdQuestions.length > 0
+              ) {
+                const createdCount = responseData.createdQuestions.length;
+                const failedCount = responseData.failedQuestions
+                  ? responseData.failedQuestions.length
+                  : 0;
+                const totalQuestions = parsedQuestions.length;
+
+                setImportStatus(
+                  `Импортировано ${createdCount} из ${totalQuestions} вопросов с ошибками.`
+                );
+
+                toast({
+                  title: "Частичный импорт",
+                  description: `Добавлено ${createdCount} из ${totalQuestions} вопросов. ${failedCount} вопросов не удалось импортировать.`,
+                  variant: "destructive",
+                });
+
+                // Редирект, так как часть вопросов все же была создана
+                setTimeout(() => {
+                  const userRole = localStorage.getItem("userRole");
+                  if (userRole === "admin") {
+                    navigate("/admin/quizzes");
+                  } else if (userRole === "teacher") {
+                    navigate("/teacher/quizzes");
+                  } else {
+                    navigate("/");
+                  }
+                }, 1500);
+
+                return;
+              }
+            }
+
+            // Если не удалось обработать ответ или нет информации о созданных вопросах
+            setError("Ошибка при импорте теста. Попробуйте снова.");
+            setIsLoading(false);
+            setImportStatus("Произошла ошибка при импорте");
           }
         } catch (err) {
           console.error("Error processing file:", err);
@@ -183,31 +292,6 @@ export default function ImportQuizPage() {
     }
   };
 
-  // Function to create a single question
-  const createQuestion = async (question: Question, quizId: string) => {
-    try {
-      const questionDto = {
-        quizId,
-        text: question.text,
-        type: question.type,
-        order: question.order || 0,
-        points: question.points || 1,
-        correctAnswers: question.correctAnswers || [],
-        options: question.options || [],
-      };
-
-      console.log("Creating question:", questionDto);
-      await api.post("/questions", questionDto);
-    } catch (error) {
-      console.error("Error creating question:", error);
-      throw new Error(
-        `Ошибка при создании вопроса: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  };
-
   // Function to parse JSON quiz
   const parseJsonQuiz = (content: string): Question[] => {
     try {
@@ -224,6 +308,7 @@ export default function ImportQuizPage() {
         console.log(
           `Detected pre-generated test: "${parsedData.title}" with ${parsedData.questions.length} questions`
         );
+
         const mappedQuestions = parsedData.questions.map(
           (q: any, index: number) => ({
             ...q,
@@ -425,92 +510,40 @@ export default function ImportQuizPage() {
     return validQuestions;
   };
 
-  // Function to handle going back to step 1
-  const handleBack = () => {
-    setStep(ImportStep.INFO);
-    setError(null);
-  };
-
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">Импорт теста</h1>
+    <div className="container max-w-4xl mx-auto py-6 space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Импорт теста</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert className="mb-4">
+            <InfoCircledIcon className="h-4 w-4" />
+            <AlertTitle>Информация</AlertTitle>
+            <AlertDescription>
+              Загрузите файл с вопросами в формате JSON или CSV. Тест будет
+              создан автоматически. Если в JSON файле есть поля title и
+              description, они будут использованы как название и описание теста.
+            </AlertDescription>
+          </Alert>
 
-      {step === ImportStep.INFO ? (
-        <QuizInfoForm
-          title={title}
-          description={description}
-          onTitleChange={(e) => setTitle(e.target.value)}
-          onDescriptionChange={(e) => setDescription(e.target.value)}
-          onSubmit={handleCreateQuiz}
-          isLoading={isLoading}
-        />
-      ) : (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>{description}</p>
-              <Button variant="outline" onClick={handleBack} className="mt-4">
-                Редактировать информацию
-              </Button>
-            </CardContent>
-          </Card>
-
-          <QuestionImportForm
-            onFileChange={handleFileChange}
-            onImport={handleImportQuestions}
-            error={error}
-            isLoading={isLoading}
-          />
-
-          {isLoading && (
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>Прогресс импорта</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Progress value={importProgress} className="h-2" />
-                  <p className="text-center text-sm text-muted-foreground">
-                    {importStatus}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm">{importStatus}</p>
+                <Progress value={importProgress} />
+              </div>
+            </div>
+          ) : (
+            <QuestionImportForm
+              onFileChange={handleFileChange}
+              onImport={handleImportQuestions}
+              error={error}
+              isLoading={isLoading}
+            />
           )}
-
-          {!isLoading && (
-            <Alert className="mt-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
-              <InfoCircledIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <AlertTitle>Требования к файлу</AlertTitle>
-              <AlertDescription>
-                <p className="mt-2 text-sm">
-                  Вы можете загрузить файл в формате JSON или CSV. Для JSON
-                  файла вопросы должны иметь следующие поля:
-                </p>
-                <ul className="list-disc pl-6 mt-1 text-sm space-y-1">
-                  <li>
-                    <strong>text</strong> - текст вопроса
-                  </li>
-                  <li>
-                    <strong>type</strong> - тип вопроса (MULTIPLE_CHOICE,
-                    SINGLE_CHOICE, TRUE_FALSE)
-                  </li>
-                  <li>
-                    <strong>options</strong> - массив вариантов ответа
-                  </li>
-                  <li>
-                    <strong>correctAnswers</strong> - массив правильных ответов
-                  </li>
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      )}
-
+        </CardContent>
+      </Card>
       <Toaster />
     </div>
   );
