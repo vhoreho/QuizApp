@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Question } from '../../questions/entities/question.entity';
 import { Result } from '../../results/entities/result.entity';
@@ -23,6 +23,9 @@ export class Quiz {
 
   @Column({ default: false })
   isPublished: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
 
   @OneToMany(() => Question, question => question.quiz, { cascade: true })
   questions: Question[];

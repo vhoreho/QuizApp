@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { errorLogger } from '../lib/errorLogger';
 
 const API_URL = 'http://localhost:3000';
 
@@ -39,7 +40,26 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error(`API Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
+    // Логируем HTTP ошибки
+    const status = error.response?.status;
+    const url = error.config?.url;
+    const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
+
+    // Формируем сообщение об ошибке
+    const errorMessage = error.response?.data?.message || error.message;
+    const fullMessage = `HTTP Error ${status}: ${errorMessage} [${method} ${url}]`;
+
+    // Логируем ошибку
+    errorLogger.logError(new Error(fullMessage), {
+      status,
+      method,
+      url,
+      data: error.config?.data,
+      responseData: error.response?.data,
+      source: 'axios-error'
+    });
+
+    console.error(`API Error: ${status} - ${errorMessage}`);
     return Promise.reject(error);
   }
 );

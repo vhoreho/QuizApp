@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -31,14 +31,6 @@ export class UsersService {
     return UserResponseDto.fromEntity(user);
   }
 
-  async findByEmail(email: string): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { email } });
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
-    }
-    return user;
-  }
-
   async findByUsername(username: string): Promise<User> {
     return this.usersRepository.findOne({ where: { username } });
   }
@@ -62,15 +54,24 @@ export class UsersService {
     await this.usersRepository.remove(user);
   }
 
-  async count(): Promise<number> {
+  async count(excludeUserId?: number): Promise<number> {
+    if (excludeUserId) {
+      return this.usersRepository.count({
+        where: { id: Not(excludeUserId) }
+      });
+    }
     return this.usersRepository.count();
   }
 
-  async countByRole(): Promise<Record<UserRole, number>> {
+  async countByRole(excludeUserId?: number): Promise<Record<UserRole, number>> {
     const roles = Object.values(UserRole);
     const counts = await Promise.all(
       roles.map(async (role) => {
-        const count = await this.usersRepository.count({ where: { role } });
+        let whereClause: any = { role };
+        if (excludeUserId) {
+          whereClause = { role, id: Not(excludeUserId) };
+        }
+        const count = await this.usersRepository.count({ where: whereClause });
         return { role, count };
       })
     );
@@ -81,11 +82,18 @@ export class UsersService {
     }, {} as Record<UserRole, number>);
   }
 
-  async findRecent(limit: number): Promise<UserResponseDto[]> {
-    const users = await this.usersRepository.find({
-      order: { id: 'DESC' },
-      take: limit,
-    });
+  async findRecent(limit: number, excludeUserId?: number): Promise<UserResponseDto[]> {
+    let queryBuilder = this.usersRepository.createQueryBuilder('user');
+
+    if (excludeUserId) {
+      queryBuilder = queryBuilder.where('user.id != :excludeUserId', { excludeUserId });
+    }
+
+    const users = await queryBuilder
+      .orderBy('user.id', 'DESC')
+      .take(limit)
+      .getMany();
+
     return users.map(user => UserResponseDto.fromEntity(user));
   }
 } 

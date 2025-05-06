@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, BeforeInsert, BeforeUpdate, AfterLoad } from 'typeorm';
 import { Quiz } from '../../quizzes/entities/quiz.entity';
 import { Answer } from '../../answers/entities/answer.entity';
 import { QuestionType } from '../enums/question-type.enum';
@@ -25,10 +25,10 @@ export class Question {
   })
   type: QuestionType;
 
-  @Column('simple-array', { nullable: true })
+  @Column('json', { nullable: true, default: '[]' })
   options: string[];
 
-  @Column('simple-array', { nullable: true })
+  @Column('json', { nullable: true, default: '[]' })
   correctAnswers: string[];
 
   @Column({ nullable: true })

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, Patch, Req } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -157,23 +157,31 @@ export class AdminController {
 
   // Dashboard statistics
   @Get('stats')
-  getDashboardStats() {
-    return this.getSystemStats();
+  getDashboardStats(
+    @Query('excludeCurrentUser') excludeCurrentUser: boolean,
+    @Query('publishedOnly') publishedOnly: boolean,
+    @Req() request
+  ) {
+    const userId = request.user?.id;
+    return this.getSystemStats(
+      excludeCurrentUser === true ? userId : undefined,
+      publishedOnly === true
+    );
   }
 
-  private async getSystemStats() {
-    const userCount = await this.usersService.count();
-    const quizCount = await this.quizzesService.count();
+  private async getSystemStats(excludeUserId?: number, publishedOnly: boolean = false) {
+    const userCount = await this.usersService.count(excludeUserId);
+    const quizCount = await this.quizzesService.count(publishedOnly);
     const resultCount = await this.resultsService.count();
-    const usersByRole = await this.usersService.countByRole();
+    const usersByRole = await this.usersService.countByRole(excludeUserId);
 
     return {
       userCount,
       quizCount,
       resultCount,
       usersByRole,
-      recentUsers: await this.usersService.findRecent(5),
-      recentQuizzes: await this.quizzesService.findRecent(5),
+      recentUsers: await this.usersService.findRecent(5, excludeUserId),
+      recentQuizzes: await this.quizzesService.findRecent(5, publishedOnly),
     };
   }
 } 

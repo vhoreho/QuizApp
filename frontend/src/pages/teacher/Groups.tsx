@@ -49,7 +49,6 @@ import { authApi } from "../../api/auth";
 interface Student {
   id: number;
   name: string;
-  email: string;
   quizzesTaken: number;
   averageScore: number;
 }
@@ -123,21 +122,18 @@ export default function TeacherGroups() {
             {
               id: 1,
               name: "Иванов Алексей",
-              email: "ivanov@example.com",
               quizzesTaken: 4,
               averageScore: 85,
             },
             {
               id: 2,
               name: "Смирнова Ольга",
-              email: "smirnova@example.com",
               quizzesTaken: 5,
               averageScore: 92,
             },
             {
               id: 3,
               name: "Петров Дмитрий",
-              email: "petrov@example.com",
               quizzesTaken: 3,
               averageScore: 78,
             },
@@ -153,14 +149,12 @@ export default function TeacherGroups() {
             {
               id: 4,
               name: "Козлова Анна",
-              email: "kozlova@example.com",
               quizzesTaken: 3,
               averageScore: 88,
             },
             {
               id: 5,
               name: "Соколов Игорь",
-              email: "sokolov@example.com",
               quizzesTaken: 2,
               averageScore: 75,
             },
@@ -176,7 +170,6 @@ export default function TeacherGroups() {
             {
               id: 6,
               name: "Новикова Елена",
-              email: "novikova@example.com",
               quizzesTaken: 2,
               averageScore: 90,
             },

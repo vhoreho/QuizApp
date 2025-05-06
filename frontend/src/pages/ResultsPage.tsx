@@ -355,7 +355,7 @@ const ResultsPage = () => {
           <Button
             variant="outline"
             className="w-full hover:bg-primary/10 transition-all duration-300 flex items-center justify-center gap-2"
-            onClick={() => navigate("/student/results")}
+            onClick={() => navigate(-1)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

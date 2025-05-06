@@ -14,13 +14,45 @@ export const QUIZ_KEYS = {
   statistics: (id: number) => [...QUIZ_KEYS.detail(id), "statistics"] as const,
 };
 
+// Admin Quizzes
+export const ADMIN_QUIZ_KEYS = {
+  all: [...QUIZ_KEYS.all, 'admin'] as const,
+  lists: () => [...ADMIN_QUIZ_KEYS.all, 'list'] as const,
+  list: (filters: any) => [...ADMIN_QUIZ_KEYS.lists(), { ...filters }] as const,
+  details: () => [...ADMIN_QUIZ_KEYS.all, 'detail'] as const,
+  detail: (id: number) => [...ADMIN_QUIZ_KEYS.details(), id] as const,
+}
+
 // Хуки для администратора
-export const useAdminQuizzes = (withDetails = false) => {
+export const useAdminQuizzes = (filters?: { title?: string, isPublished?: boolean }) => {
+  const queryClient = useQueryClient();
+
   return useQuery({
-    queryKey: QUIZ_KEYS.list({ role: UserRole.ADMIN, withDetails }),
-    queryFn: () => adminApi.getAllQuizzes(withDetails),
+    queryKey: ADMIN_QUIZ_KEYS.list(filters),
+    queryFn: async () => {
+      // Получаем все тесты
+      const quizzes = await adminApi.getAllQuizzes(true);
+
+      // Применяем фильтры, если они указаны
+      let filteredQuizzes = [...quizzes];
+
+      if (filters?.title) {
+        filteredQuizzes = filteredQuizzes.filter(quiz =>
+          quiz.title.toLowerCase().includes(filters.title!.toLowerCase())
+        );
+      }
+
+      if (filters?.isPublished !== undefined) {
+        filteredQuizzes = filteredQuizzes.filter(quiz =>
+          quiz.isPublished === filters.isPublished
+        );
+      }
+
+      return filteredQuizzes;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
-};
+}
 
 export const useAdminQuizById = (id: number) => {
   return useQuery({
@@ -62,10 +94,16 @@ export const useDeleteQuiz = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => adminApi.deleteQuiz(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUIZ_KEYS.lists() });
+    mutationFn: async (quizId: number) => {
+      return adminApi.deleteQuiz(quizId);
     },
+    onSuccess: (_, quizId) => {
+      // Инвалидируем кэши, связанные с тестами
+      queryClient.invalidateQueries({ queryKey: ADMIN_QUIZ_KEYS.lists() });
+
+      // Удаляем данные удаленного теста из кэша
+      queryClient.removeQueries({ queryKey: ADMIN_QUIZ_KEYS.detail(quizId) });
+    }
   });
 };
 
@@ -73,12 +111,20 @@ export const useUpdateQuizStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, isPublished }: { id: number; isPublished: boolean }) =>
-      adminApi.updateQuizStatus(id, isPublished),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUIZ_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: QUIZ_KEYS.detail(variables.id) });
+    mutationFn: async ({ quizId, isPublished }: { quizId: number, isPublished: boolean }) => {
+      return adminApi.updateQuizStatus(quizId, isPublished);
     },
+    onSuccess: (updatedQuiz) => {
+      // Инвалидируем кэши, связанные с тестами
+      queryClient.invalidateQueries({ queryKey: ADMIN_QUIZ_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: ADMIN_QUIZ_KEYS.detail(updatedQuiz.id) });
+
+      // Обновляем кэш для конкретного теста
+      queryClient.setQueryData(
+        ADMIN_QUIZ_KEYS.detail(updatedQuiz.id),
+        updatedQuiz
+      );
+    }
   });
 };
 

@@ -12,6 +12,7 @@ export interface CreateQuizDto {
   description: string;
   timeLimit?: number;
   isPublished?: boolean;
+  questions?: CreateQuestionDto[];
 }
 
 export interface CreateQuestionDto {
@@ -101,6 +102,77 @@ export const teacherApi = {
   createQuiz: async (createQuizDto: CreateQuizDto): Promise<Quiz> => {
     const response = await api.post('/teacher/quizzes', createQuizDto);
     return response.data;
+  },
+
+  importQuizFromFile: async (title: string, description: string, questions: any[]): Promise<Quiz> => {
+    try {
+      console.log('Starting quiz import with:', { title, description, questionsCount: questions.length });
+
+      // Prepare questions for submission
+      const preparedQuestions = questions.map((question, index) => {
+        console.log(`Processing question ${index + 1}:`, {
+          text: question.text?.substring(0, 30) + '...',
+          type: question.type,
+          correctAnswers: question.correctAnswers,
+          options: question.options?.length
+        });
+
+        // Create base question DTO
+        const questionDto: any = {
+          text: question.text,
+          type: question.type,
+          order: index,
+          points: question.points || 1,
+          options: question.options || [],
+        };
+
+        // Add proper fields based on question type
+        if (question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") {
+          // For SINGLE_CHOICE and TRUE_FALSE, we need a single correctAnswer, not an array
+          if (Array.isArray(question.correctAnswers) && question.correctAnswers.length > 0) {
+            questionDto.correctAnswer = question.correctAnswers[0];
+            // Remove correctAnswers array to avoid confusion with backend
+            delete questionDto.correctAnswers;
+            console.log(`Question ${index + 1} ${question.type} correctAnswer:`, questionDto.correctAnswer);
+          } else {
+            questionDto.correctAnswer = question.options[0] || "";
+            console.log(`Question ${index + 1} No correctAnswers found, defaulting to first option`);
+          }
+        } else if (question.type === "MULTIPLE_CHOICE") {
+          // For MULTIPLE_CHOICE, ensure correctAnswers is an array
+          questionDto.correctAnswers = Array.isArray(question.correctAnswers)
+            ? question.correctAnswers
+            : (question.correctAnswers ? [question.correctAnswers] : []);
+          // Remove any correctAnswer field to avoid confusion
+          delete questionDto.correctAnswer;
+          console.log(`Question ${index + 1} MULTIPLE_CHOICE correctAnswers:`, questionDto.correctAnswers);
+        } else if (question.type === "MATCHING") {
+          // For MATCHING, ensure matchingPairs is an object
+          questionDto.matchingPairs = question.matchingPairs || {};
+          // Remove any correctAnswer/correctAnswers to avoid confusion
+          delete questionDto.correctAnswer;
+          delete questionDto.correctAnswers;
+          console.log(`Question ${index + 1} MATCHING matchingPairs:`, questionDto.matchingPairs);
+        }
+
+        return questionDto;
+      });
+
+      console.log(`Prepared ${preparedQuestions.length} questions for submission`);
+
+      // Create the quiz with all questions in one request using the universal endpoint
+      const quizResponse = await api.post('/quizzes', {
+        title,
+        description,
+        questions: preparedQuestions,
+      });
+
+      console.log('Quiz with questions created successfully:', quizResponse.data);
+      return quizResponse.data;
+    } catch (error) {
+      console.error('Error importing quiz from file:', error);
+      throw error;
+    }
   },
 
   deleteQuiz: async (id: number): Promise<void> => {
@@ -234,9 +306,9 @@ export const adminApi = {
     return response.data;
   },
 
-  getDashboardStats: async () => {
+  getDashboardStats: async (excludeCurrentUser: boolean = true, publishedOnly: boolean = true) => {
     try {
-      const response = await api.get('/admin/stats');
+      const response = await api.get(`/admin/stats?excludeCurrentUser=${excludeCurrentUser}&publishedOnly=${publishedOnly}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -281,4 +353,175 @@ export const adminApi = {
   deleteQuestion: async (id: number): Promise<void> => {
     await api.delete(`/questions/${id}`);
   }
+};
+
+// Universal Quiz API
+export const quizApi = {
+  createQuiz: async (createQuizDto: CreateQuizDto): Promise<Quiz> => {
+    try {
+      console.log('Creating quiz with questions:', createQuizDto.title, createQuizDto.questions?.length);
+
+      // Make a deep copy of the DTO to avoid modifying the original
+      const dto = JSON.parse(JSON.stringify(createQuizDto));
+
+      // Process each question to ensure arrays are properly handled
+      if (dto.questions) {
+        dto.questions = dto.questions.map((q: any, index: number) => {
+          // Ensure options array is properly set
+          if (q.options && Array.isArray(q.options)) {
+            // Make sure every option is a string
+            q.options = q.options.map((opt: any) => String(opt));
+          }
+
+          // Handle question type-specific fields
+          if (q.type === QuestionType.MULTIPLE_CHOICE) {
+            if (q.correctAnswers && Array.isArray(q.correctAnswers)) {
+              // Make sure every correctAnswer is a string
+              q.correctAnswers = q.correctAnswers.map((ans: any) => String(ans));
+            }
+          } else if (q.type === QuestionType.SINGLE_CHOICE || q.type === QuestionType.TRUE_FALSE) {
+            // Ensure correctAnswer is a string
+            if (q.correctAnswer) {
+              q.correctAnswer = String(q.correctAnswer);
+            }
+          }
+
+          return q;
+        });
+      }
+
+      console.log('Sending create quiz request with:', dto);
+
+      const response = await api.post('/quizzes', dto);
+
+      console.log('Quiz created successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating quiz:', error);
+      throw error;
+    }
+  },
+
+  getAllQuizzes: async (withDetails: boolean = false): Promise<Quiz[]> => {
+    const response = await api.get(`/quizzes?withDetails=${withDetails}`);
+    return response.data;
+  },
+
+  getQuizById: async (id: number): Promise<Quiz> => {
+    const response = await api.get(`/quizzes/${id}`);
+    return response.data;
+  },
+
+  addQuestion: async (quizId: number, createQuestionDto: CreateQuestionDto): Promise<Question> => {
+    if (!createQuestionDto.quizId) {
+      createQuestionDto = { ...createQuestionDto, quizId };
+    }
+
+    const response = await api.post(`/quizzes/${quizId}/questions`, createQuestionDto);
+    return response.data;
+  },
+
+  updateQuizStatus: async (id: number, isPublished: boolean): Promise<Quiz> => {
+    const response = await api.patch(`/quizzes/${id}/status`, { isPublished });
+    return response.data;
+  },
+
+  updateQuiz: async (id: number, updateQuizDto: UpdateQuizDto): Promise<Quiz> => {
+    const response = await api.patch(`/quizzes/${id}`, updateQuizDto);
+    return response.data;
+  },
+
+  deleteQuiz: async (id: number): Promise<void> => {
+    await api.delete(`/quizzes/${id}`);
+  },
+
+  getQuizResults: async (quizId: number): Promise<Result[]> => {
+    const response = await api.get(`/quizzes/${quizId}/results`);
+    return response.data;
+  },
+
+  getQuizStatistics: async (quizId: number): Promise<any> => {
+    const response = await api.get(`/quizzes/${quizId}/statistics`);
+    return response.data;
+  },
+
+  updateQuestion: async (id: number, updateQuestionDto: UpdateQuestionDto): Promise<Question> => {
+    const response = await api.patch(`/questions/${id}`, updateQuestionDto);
+    return response.data;
+  },
+
+  deleteQuestion: async (id: number): Promise<void> => {
+    await api.delete(`/questions/${id}`);
+  },
+
+  importQuizFromFile: async (title: string, description: string, questions: any[]): Promise<Quiz> => {
+    try {
+      console.log('Starting quiz import with:', { title, description, questionsCount: questions.length });
+
+      // Prepare questions for submission
+      const preparedQuestions = questions.map((question, index) => {
+        console.log(`Processing question ${index + 1}:`, {
+          text: question.text?.substring(0, 30) + '...',
+          type: question.type,
+          correctAnswers: question.correctAnswers,
+          options: question.options?.length
+        });
+
+        // Create base question DTO
+        const questionDto: any = {
+          text: question.text,
+          type: question.type,
+          order: index,
+          points: question.points || 1,
+          options: question.options || [],
+        };
+
+        // Add proper fields based on question type
+        if (question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") {
+          // For SINGLE_CHOICE and TRUE_FALSE, we need a single correctAnswer, not an array
+          if (Array.isArray(question.correctAnswers) && question.correctAnswers.length > 0) {
+            questionDto.correctAnswer = question.correctAnswers[0];
+            // Remove correctAnswers array to avoid confusion with backend
+            delete questionDto.correctAnswers;
+            console.log(`Question ${index + 1} ${question.type} correctAnswer:`, questionDto.correctAnswer);
+          } else {
+            questionDto.correctAnswer = question.options[0] || "";
+            console.log(`Question ${index + 1} No correctAnswers found, defaulting to first option`);
+          }
+        } else if (question.type === "MULTIPLE_CHOICE") {
+          // For MULTIPLE_CHOICE, ensure correctAnswers is an array
+          questionDto.correctAnswers = Array.isArray(question.correctAnswers)
+            ? question.correctAnswers
+            : (question.correctAnswers ? [question.correctAnswers] : []);
+          // Remove any correctAnswer field to avoid confusion
+          delete questionDto.correctAnswer;
+          console.log(`Question ${index + 1} MULTIPLE_CHOICE correctAnswers:`, questionDto.correctAnswers);
+        } else if (question.type === "MATCHING") {
+          // For MATCHING, ensure matchingPairs is an object
+          questionDto.matchingPairs = question.matchingPairs || {};
+          // Remove any correctAnswer/correctAnswers to avoid confusion
+          delete questionDto.correctAnswer;
+          delete questionDto.correctAnswers;
+          console.log(`Question ${index + 1} MATCHING matchingPairs:`, questionDto.matchingPairs);
+        }
+
+        return questionDto;
+      });
+
+      console.log(`Prepared ${preparedQuestions.length} questions for submission`);
+
+      // Create the quiz with all questions in one request using the universal endpoint
+      const quizResponse = await api.post('/quizzes', {
+        title,
+        description,
+        questions: preparedQuestions,
+      });
+
+      console.log('Quiz with questions created successfully:', quizResponse.data);
+      return quizResponse.data;
+    } catch (error) {
+      console.error('Error importing quiz from file:', error);
+      throw error;
+    }
+  },
 }; 

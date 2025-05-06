@@ -8,6 +8,7 @@ import { AnswersModule } from './answers/answers.module';
 import { ResultsModule } from './results/results.module';
 import { LoggerModule } from 'nestjs-pino';
 import { LoggerModule as AppLoggerModule } from './logger.module';
+import { LoggerErrorModule } from './logger/logger.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
@@ -52,10 +53,12 @@ import { StudentModule } from './student/student.module';
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Set to false in production
+        synchronize: true,
+        logging: true,
       }),
     }),
     AppLoggerModule,
+    LoggerErrorModule,
     UsersModule,
     QuizzesModule,
     QuestionsModule,

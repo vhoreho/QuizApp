@@ -42,7 +42,10 @@ export class QuestionsService {
         questionData.correctAnswers = [createQuestionDto.correctAnswer];
         break;
       case QuestionType.MULTIPLE_CHOICE:
-        // Уже содержит correctAnswers
+        // Ensure correctAnswers is properly handled as an array without splitting strings
+        if (Array.isArray(createQuestionDto.correctAnswers)) {
+          questionData.correctAnswers = [...createQuestionDto.correctAnswers];
+        }
         break;
       case QuestionType.MATCHING:
         // Сохраняем ключи сопоставления в options, а значения в correctAnswers
@@ -52,6 +55,18 @@ export class QuestionsService {
         questionData.correctAnswers = values;
         break;
     }
+
+    // Ensure options is treated as a proper array
+    if (createQuestionDto.options && Array.isArray(createQuestionDto.options)) {
+      questionData.options = [...createQuestionDto.options];
+    }
+
+    this.logger.log(`Creating question with data: ${JSON.stringify({
+      type: questionData.type,
+      text: questionData.text?.substring(0, 30) + '...',
+      options: Array.isArray(questionData.options) ? questionData.options.length : 'none',
+      correctAnswers: Array.isArray(questionData.correctAnswers) ? questionData.correctAnswers.length : 'none'
+    })}`);
 
     const question = this.questionsRepository.create(questionData);
     const savedQuestion = await this.questionsRepository.save(question);
@@ -67,6 +82,8 @@ export class QuestionsService {
    * @returns Объект с созданными вопросами и информацией о неудачных
    */
   async createBatch(batchDto: CreateQuestionsBatchDto): Promise<BatchResult> {
+    this.logger.log(`Starting batch creation with ${batchDto.questions?.length || 0} questions for quiz ID ${batchDto.quizId}`);
+
     const { quizId, questions } = batchDto;
     const result: BatchResult = {
       createdQuestions: [],
@@ -74,10 +91,9 @@ export class QuestionsService {
     };
 
     if (!questions || !questions.length) {
+      this.logger.error('No questions provided for batch creation');
       throw new BadRequestException('No questions provided for batch creation');
     }
-
-    this.logger.log(`Starting batch creation of ${questions.length} questions for quiz ID ${quizId}`);
 
     // Преобразуем и валидируем каждый вопрос по отдельности
     const questionEntities: DeepPartial<Question>[] = [];
@@ -85,6 +101,14 @@ export class QuestionsService {
     for (let i = 0; i < questions.length; i++) {
       const questionDto = questions[i];
       try {
+        // Validate required fields
+        if (!questionDto.text) {
+          throw new Error('Question text is required');
+        }
+        if (!questionDto.type) {
+          throw new Error('Question type is required');
+        }
+
         const questionData: DeepPartial<Question> = {
           ...questionDto,
           quizId,
@@ -92,29 +116,52 @@ export class QuestionsService {
           order: questionDto.order !== undefined ? questionDto.order : i,
         };
 
+        // Ensure options is properly handled as an array
+        if (questionDto.options && Array.isArray(questionDto.options)) {
+          // Create a new array to avoid reference issues
+          questionData.options = [...questionDto.options];
+
+          // Log the options for debugging
+          this.logger.log(`Question ${i + 1} options: ${JSON.stringify(questionData.options)}`);
+        }
+
         // Преобразование данных в зависимости от типа вопроса
         switch (questionDto.type) {
           case QuestionType.SINGLE_CHOICE:
           case QuestionType.TRUE_FALSE:
+            if (!questionDto.correctAnswer) {
+              throw new Error(`Question ${i + 1}: correctAnswer is required for ${questionDto.type} questions`);
+            }
             questionData.correctAnswers = [questionDto.correctAnswer];
             break;
           case QuestionType.MULTIPLE_CHOICE:
-            // Уже содержит correctAnswers
+            if (!questionDto.correctAnswers || !Array.isArray(questionDto.correctAnswers) || questionDto.correctAnswers.length === 0) {
+              throw new Error(`Question ${i + 1}: correctAnswers array is required for MULTIPLE_CHOICE questions`);
+            }
+
+            // Ensure we create a new array to avoid reference issues
+            questionData.correctAnswers = [...questionDto.correctAnswers];
+
+            // Log the correctAnswers for debugging
+            this.logger.log(`Question ${i + 1} correctAnswers: ${JSON.stringify(questionData.correctAnswers)}`);
             break;
           case QuestionType.MATCHING:
             // Сохраняем ключи сопоставления в options, а значения в correctAnswers
-            if (questionDto.matchingPairs) {
-              const keys = Object.keys(questionDto.matchingPairs);
-              const values = Object.values(questionDto.matchingPairs);
-              questionData.options = keys;
-              questionData.correctAnswers = values;
+            if (!questionDto.matchingPairs || typeof questionDto.matchingPairs !== 'object') {
+              throw new Error(`Question ${i + 1}: matchingPairs object is required for MATCHING questions`);
             }
-            break;
-        }
 
-        // Базовая валидация
-        if (!questionData.text || !questionData.type) {
-          throw new Error('Question must have text and type');
+            if (Object.keys(questionDto.matchingPairs).length === 0) {
+              throw new Error(`Question ${i + 1}: matchingPairs cannot be empty for MATCHING questions`);
+            }
+
+            const keys = Object.keys(questionDto.matchingPairs);
+            const values = Object.values(questionDto.matchingPairs);
+            questionData.options = keys;
+            questionData.correctAnswers = values;
+            break;
+          default:
+            throw new Error(`Question ${i + 1}: Unknown question type: ${questionDto.type}`);
         }
 
         questionEntities.push(questionData);
@@ -130,13 +177,25 @@ export class QuestionsService {
     }
 
     if (questionEntities.length === 0) {
-      throw new BadRequestException('All questions failed validation');
+      const validationErrors = result.failedQuestions.map(f => `[Q${f.index}] ${f.error}`).join('; ');
+      this.logger.error(`All questions failed validation: ${validationErrors}`);
+      throw new BadRequestException(`All questions failed validation: ${validationErrors}`);
     }
 
     try {
+      // Log each question entity before saving
+      questionEntities.forEach((q, idx) => {
+        this.logger.log(`Question entity ${idx + 1} before save: options=${JSON.stringify(q.options)}, correctAnswers=${JSON.stringify(q.correctAnswers)}`);
+      });
+
       // Создаем сущности и сохраняем все вопросы за одну транзакцию
       const entities = this.questionsRepository.create(questionEntities);
       result.createdQuestions = await this.questionsRepository.save(entities);
+
+      // Log each created question
+      result.createdQuestions.forEach((q, idx) => {
+        this.logger.log(`Created question ${idx + 1}: id=${q.id}, options=${JSON.stringify(q.options)}, correctAnswers=${JSON.stringify(q.correctAnswers)}`);
+      });
 
       this.logger.log(`Successfully created ${result.createdQuestions.length} questions for quiz ID ${quizId}`);
 

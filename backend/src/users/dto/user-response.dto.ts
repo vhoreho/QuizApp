@@ -4,7 +4,6 @@ export class UserResponseDto {
   id: number;
   username: string;
   name: string;
-  email: string;
   role: UserRole;
 
   constructor(partial: Partial<UserResponseDto>) {

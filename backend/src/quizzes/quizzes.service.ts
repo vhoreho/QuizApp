@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
@@ -22,14 +22,60 @@ export class QuizzesService {
   ) { }
 
   async create(createQuizDto: CreateQuizDto, userId: number): Promise<Quiz> {
-    const user = await this.usersService.findOne(userId);
+    try {
 
-    const quiz = this.quizzesRepository.create({
-      ...createQuizDto,
-      createdById: userId,
-    });
+      const user = await this.usersService.findOne(userId);
 
-    return this.quizzesRepository.save(quiz);
+      // Extract questions from the DTO
+      const { questions, ...quizData } = createQuizDto;
+
+      // Validate that there is at least one question
+      if (!questions || questions.length < 1) {
+        const errorMsg = 'Quiz must contain at least one question';
+        throw new BadRequestException(errorMsg);
+      }
+
+      // Create and save the quiz
+      const quiz = this.quizzesRepository.create({
+        ...quizData,
+        createdById: userId,
+      });
+
+
+      try {
+        const savedQuiz = await this.quizzesRepository.save(quiz);;
+
+
+        // Ensure each question has the quizId set
+        await this.questionsService.createBatch({
+          quizId: savedQuiz.id,
+          questions: questions.map(q => ({
+            ...q,
+            quizId: savedQuiz.id
+          }))
+        });
+
+        console.log("✅ ~ QuizzesService ~ questions batch created successfully");
+
+        // Return the saved quiz with its relations
+        const fullQuiz = await this.findOne(savedQuiz.id);
+        console.log("✅ ~ QuizzesService ~ returning complete quiz:", fullQuiz.id, fullQuiz.title);
+        return fullQuiz;
+      } catch (error) {
+        console.error("❌ ~ QuizzesService ~ error during quiz creation:", error.message);
+        console.error("Stack trace:", error.stack);
+
+        if (error.response) {
+          console.error("Response details:", error.response);
+        }
+
+        throw error;
+      }
+    } catch (error) {
+      console.error("❌ ~ QuizzesService ~ create error:", error.message);
+      console.error("Stack trace:", error.stack);
+      throw error;
+    }
   }
 
   async findAll(): Promise<Quiz[]> {
@@ -38,13 +84,49 @@ export class QuizzesService {
     });
   }
 
-  async findAllWithDetails(withDetails: boolean = false): Promise<Quiz[]> {
+  async findAllWithDetails(
+    withDetails: boolean = false,
+    createdById?: number,
+    published?: boolean,
+    isAdminRequest: boolean = false
+  ): Promise<Quiz[]> {
     const relations = ['createdBy'];
+
     if (withDetails) {
       relations.push('questions');
     }
+
+    // Формируем условия запроса
+    const whereConditions: any = {};
+
+    // Фильтр по создателю
+    if (createdById) {
+      whereConditions.createdById = createdById;
+    }
+
+    // Фильтр по статусу публикации
+    if (published !== null && published !== undefined) {
+      whereConditions.isPublished = published;
+    } else if (!isAdminRequest) {
+      // Если это не админский запрос и не указан явный фильтр по публикации, 
+      // то возвращаем только опубликованные тесты
+      whereConditions.isPublished = true;
+    }
+
     return this.quizzesRepository.find({
-      relations
+      where: whereConditions,
+      relations,
+      select: {
+        createdBy: {
+          id: true,
+          username: true,
+          name: true,
+          role: true
+        }
+      },
+      order: {
+        id: 'DESC'
+      }
     });
   }
 
@@ -76,16 +158,27 @@ export class QuizzesService {
     await this.quizzesRepository.remove(quiz);
   }
 
-  async count(): Promise<number> {
+  async count(publishedOnly: boolean = false): Promise<number> {
+    if (publishedOnly) {
+      return this.quizzesRepository.count({
+        where: { isPublished: true }
+      });
+    }
     return this.quizzesRepository.count();
   }
 
-  async findRecent(limit: number): Promise<Quiz[]> {
-    return this.quizzesRepository.find({
+  async findRecent(limit: number, publishedOnly: boolean = false): Promise<Quiz[]> {
+    const query: any = {
       relations: ['createdBy'],
       order: { id: 'DESC' },
       take: limit,
-    });
+    };
+
+    if (publishedOnly) {
+      query.where = { isPublished: true };
+    }
+
+    return this.quizzesRepository.find(query);
   }
 
   async findByTeacherId(teacherId: number): Promise<Quiz[]> {
@@ -197,5 +290,9 @@ export class QuizzesService {
     Object.assign(quiz, updateQuizDto);
 
     return this.quizzesRepository.save(quiz);
+  }
+
+  async getRecentQuizzes(limit: number, publishedOnly: boolean = false): Promise<Quiz[]> {
+    return this.findRecent(limit, publishedOnly);
   }
 } 

@@ -28,10 +28,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "../components/ui/use-toast";
 import api from "../api/axiosConfig";
+import { useUser } from "../contexts/UserContext";
 import {
   ArrowLeftIcon,
   PersonIcon,
-  EnvelopeClosedIcon,
   LockClosedIcon,
   CheckCircledIcon,
   CalendarIcon,
@@ -44,9 +44,6 @@ const profileFormSchema = z
   .object({
     name: z.string().min(2, {
       message: "Имя должно содержать не менее 2 символов",
-    }),
-    email: z.string().email({
-      message: "Пожалуйста, введите корректный email адрес",
     }),
     bio: z
       .string()
@@ -80,14 +77,13 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading: isUserLoading, logout, updateUser } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: "",
-      email: "",
       bio: "",
       currentPassword: "",
       newPassword: "",
@@ -96,16 +92,15 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    const userJson = localStorage.getItem("user");
-    if (!userJson) {
+    if (!user && !isUserLoading) {
       navigate("/login");
       return;
     }
 
-    const user = JSON.parse(userJson) as User;
-    setCurrentUser(user);
-    fetchUserProfile(user.id);
-  }, [navigate]);
+    if (user) {
+      fetchUserProfile(user.id);
+    }
+  }, [user, isUserLoading, navigate]);
 
   const fetchUserProfile = async (userId: number) => {
     setIsLoading(true);
@@ -117,16 +112,14 @@ export default function ProfilePage() {
       // Mock data for demonstration
       const userData = {
         id: userId,
-        name: currentUser?.username || "Имя пользователя",
-        email: "user@example.com",
+        name: user?.username || "Имя пользователя",
         bio: "Краткая информация о пользователе. Это демонстрационный текст, который может быть заменен на реальную информацию из профиля пользователя.",
-        role: currentUser?.role || UserRole.STUDENT,
+        role: user?.role || UserRole.STUDENT,
         createdAt: "2023-01-15T10:30:00Z",
       };
 
       form.reset({
         name: userData.name,
-        email: userData.email,
         bio: userData.bio,
       });
     } catch (err) {
@@ -145,7 +138,7 @@ export default function ProfilePage() {
     setIsLoading(true);
     try {
       // In a real application, this would update the user profile
-      // await api.put(`/users/${currentUser?.id}`, data);
+      // await api.put(`/users/${user?.id}`, data);
 
       // Mock success
       setTimeout(() => {
@@ -156,11 +149,10 @@ export default function ProfilePage() {
         setIsLoading(false);
       }, 1000);
 
-      // Update localStorage user data if name was changed
-      if (data.name && currentUser) {
-        const updatedUser = { ...currentUser, username: data.name };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setCurrentUser(updatedUser);
+      // Update user data if name was changed
+      if (data.name && user) {
+        const updatedUser = { ...user, username: data.name };
+        updateUser(updatedUser);
       }
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -174,9 +166,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setCurrentUser(null);
+    logout();
     navigate("/login");
   };
 
@@ -253,153 +243,75 @@ export default function ProfilePage() {
       case UserRole.TEACHER:
         return "/teacher/dashboard";
       case UserRole.STUDENT:
-        return "/student/dashboard";
       default:
-        return "/";
+        return "/student/dashboard";
     }
   };
 
-  if (!currentUser) {
+  if (!user) {
     return <div>Loading...</div>;
   }
 
-  const colorScheme = getRoleColorScheme(currentUser.role);
+  const colorScheme = getRoleColorScheme(user.role);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser} onLogout={handleLogout} />
+      <Header user={user} onLogout={handleLogout} />
 
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                className="flex items-center text-muted-foreground mr-4 hover:bg-muted/30 transition-colors group"
-                onClick={() => navigate(getDashboardLink(currentUser.role))}
-              >
-                <ArrowLeftIcon className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                Назад
-              </Button>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-                  <div className={`${colorScheme.iconBg} p-1.5 rounded-full`}>
-                    <PersonIcon
-                      className={`h-6 w-6 ${colorScheme.iconColor}`}
-                    />
-                  </div>
-                  Личный профиль
-                </h1>
-                <p className="text-muted-foreground">
-                  Управление личными данными и настройками
-                </p>
+        <div className="container max-w-6xl py-8">
+          <Card className={`overflow-hidden border ${colorScheme.border}`}>
+            <div
+              className={`bg-gradient-to-r ${colorScheme.gradient} p-6 sm:p-10 relative`}
+            >
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div
+                  className={`w-24 h-24 rounded-full ${colorScheme.iconBg} flex items-center justify-center text-2xl font-semibold ${colorScheme.iconColor}`}
+                >
+                  {user.username ? user.username.charAt(0) : "U"}
+                </div>
+                <div className="text-center">
+                  <h3 className="font-medium text-lg">
+                    {user.username || "Пользователь"}
+                  </h3>
+                  <div className="mt-1">{getRoleBadge(user.role)}</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* User Info Card */}
-            <Card
-              withSticky
-              className={`border ${colorScheme.border} bg-gradient-to-br ${colorScheme.gradient} shadow-md hover:shadow-lg transition-all duration-300 group overflow-hidden`}
-            >
-              <CardHeader>
-                <div className="absolute top-2 right-2 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <PersonIcon
-                    className={`h-32 w-32 ${colorScheme.iconColor} rotate-12`}
-                  />
-                </div>
-                <CardTitle className="flex items-center">
-                  <div
-                    className={`${colorScheme.iconBg} p-2 rounded-full mr-2`}
-                  >
-                    <PersonIcon
-                      className={`h-5 w-5 ${colorScheme.iconColor}`}
-                    />
+            <div className="p-6 sm:p-10">
+              <div className="grid gap-6 mb-8">
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <IdCardIcon className="h-4 w-4" />
+                    ID пользователя:
                   </div>
-                  Информация
-                </CardTitle>
-                <CardDescription>Ваши основные данные</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 space-y-6">
-                <div className="flex flex-col items-center space-y-4">
-                  <div
-                    className={`w-24 h-24 rounded-full ${colorScheme.iconBg} flex items-center justify-center text-2xl font-semibold ${colorScheme.iconColor}`}
-                  >
-                    {currentUser.username
-                      ? currentUser.username.charAt(0)
-                      : "U"}
-                  </div>
-                  <div className="text-center">
-                    <h3 className="font-medium text-lg">
-                      {currentUser.username || "Пользователь"}
-                    </h3>
-                    <div className="mt-1">{getRoleBadge(currentUser.role)}</div>
-                  </div>
+                  <p className="font-medium">{user.id}</p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/50 dark:bg-black/10">
-                    <EnvelopeClosedIcon
-                      className={`h-4 w-4 ${colorScheme.iconColor}`}
-                    />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email:</p>
-                      <p className="font-medium">{form.getValues().email}</p>
-                    </div>
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <CalendarIcon className="h-4 w-4" />
+                    Дата регистрации:
                   </div>
-
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/50 dark:bg-black/10">
-                    <IdCardIcon
-                      className={`h-4 w-4 ${colorScheme.iconColor}`}
-                    />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        ID пользователя:
-                      </p>
-                      <p className="font-medium">{currentUser.id}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-white/50 dark:bg-black/10">
-                    <CalendarIcon
-                      className={`h-4 w-4 ${colorScheme.iconColor}`}
-                    />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Дата регистрации:
-                      </p>
-                      <p className="font-medium">
-                        {new Date("2023-01-15T10:30:00Z").toLocaleDateString(
-                          "ru-RU"
-                        )}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="font-medium">
+                    {new Date("2023-01-15T10:30:00Z").toLocaleDateString()}
+                  </p>
                 </div>
-              </CardContent>
-              <CardFooter
-                className={`bg-gradient-to-r ${colorScheme.footerBg} border-t ${colorScheme.footerBorder}`}
-              >
-                <Button
-                  variant="outline"
-                  className={`w-full border-${colorScheme.iconColor}/20`}
-                  onClick={handleLogout}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* User Info Card */}
+                <Card
+                  withSticky
+                  className={`border ${colorScheme.border} bg-gradient-to-br ${colorScheme.gradient} shadow-md hover:shadow-lg transition-all duration-300 group overflow-hidden`}
                 >
-                  <ExitIcon className="mr-2 h-4 w-4" />
-                  Выйти из системы
-                </Button>
-              </CardFooter>
-            </Card>
-
-            {/* Edit Profile Card */}
-            <Card
-              withSticky
-              className="border border-border col-span-1 lg:col-span-2 shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
                   <CardHeader>
+                    <div className="absolute top-2 right-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <PersonIcon
+                        className={`h-32 w-32 ${colorScheme.iconColor} rotate-12`}
+                      />
+                    </div>
                     <CardTitle className="flex items-center">
                       <div
                         className={`${colorScheme.iconBg} p-2 rounded-full mr-2`}
@@ -408,139 +320,52 @@ export default function ProfilePage() {
                           className={`h-5 w-5 ${colorScheme.iconColor}`}
                         />
                       </div>
-                      Редактирование профиля
+                      Информация
                     </CardTitle>
-                    <CardDescription>
-                      Обновите ваши личные данные и настройки
-                    </CardDescription>
+                    <CardDescription>Ваши основные данные</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4 flex-1">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Имя</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Ваше имя"
-                              className="border-muted-foreground/20"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <CardContent className="flex-1 space-y-6">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div
+                        className={`w-24 h-24 rounded-full ${colorScheme.iconBg} flex items-center justify-center text-2xl font-semibold ${colorScheme.iconColor}`}
+                      >
+                        {user.username ? user.username.charAt(0) : "U"}
+                      </div>
+                      <div className="text-center">
+                        <h3 className="font-medium text-lg">
+                          {user.username || "Пользователь"}
+                        </h3>
+                        <div className="mt-1">{getRoleBadge(user.role)}</div>
+                      </div>
+                    </div>
 
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="email"
-                              placeholder="your.email@example.com"
-                              className="border-muted-foreground/20"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="bio"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>О себе</FormLabel>
-                          <FormControl>
-                            <textarea
-                              {...field}
-                              className="flex min-h-[120px] w-full rounded-md border border-muted-foreground/20 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                              placeholder="Расскажите о себе"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Краткая информация о вас, которая будет видна другим
-                            пользователям.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div
-                      className={`mt-6 p-4 rounded-lg bg-gradient-to-br ${colorScheme.gradient} ${colorScheme.border} border`}
-                    >
-                      <h3 className="font-medium mb-4 flex items-center gap-2">
-                        <LockClosedIcon
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-3 rounded-md bg-white/50 dark:bg-black/10">
+                        <IdCardIcon
                           className={`h-4 w-4 ${colorScheme.iconColor}`}
                         />
-                        Сменить пароль
-                      </h3>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            ID пользователя:
+                          </p>
+                          <p className="font-medium">{user.id}</p>
+                        </div>
+                      </div>
 
-                      <div className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="currentPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Текущий пароль</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="password"
-                                  placeholder="••••••••"
-                                  className="bg-white/70 dark:bg-black/20 border-0"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                      <div className="flex items-center gap-3 p-3 rounded-md bg-white/50 dark:bg-black/10">
+                        <CalendarIcon
+                          className={`h-4 w-4 ${colorScheme.iconColor}`}
                         />
-
-                        <FormField
-                          control={form.control}
-                          name="newPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Новый пароль</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="password"
-                                  placeholder="••••••••"
-                                  className="bg-white/70 dark:bg-black/20 border-0"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="confirmPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Подтвердите пароль</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="password"
-                                  placeholder="••••••••"
-                                  className="bg-white/70 dark:bg-black/20 border-0"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Дата регистрации:
+                          </p>
+                          <p className="font-medium">
+                            {new Date(
+                              "2023-01-15T10:30:00Z"
+                            ).toLocaleDateString("ru-RU")}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -548,22 +373,171 @@ export default function ProfilePage() {
                     className={`bg-gradient-to-r ${colorScheme.footerBg} border-t ${colorScheme.footerBorder}`}
                   >
                     <Button
-                      type="submit"
-                      className={`w-full group ${colorScheme.buttonBg}`}
-                      disabled={isLoading}
+                      variant="outline"
+                      className={`w-full border-${colorScheme.iconColor}/20`}
+                      onClick={handleLogout}
                     >
-                      {isLoading ? (
-                        <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircledIcon className="mr-2 h-4 w-4 group-hover:animate-pulse" />
-                      )}
-                      Сохранить изменения
+                      <ExitIcon className="mr-2 h-4 w-4" />
+                      Выйти из системы
                     </Button>
                   </CardFooter>
-                </form>
-              </Form>
-            </Card>
-          </div>
+                </Card>
+
+                {/* Edit Profile Card */}
+                <Card
+                  withSticky
+                  className="border border-border col-span-1 lg:col-span-2 shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <div
+                            className={`${colorScheme.iconBg} p-2 rounded-full mr-2`}
+                          >
+                            <PersonIcon
+                              className={`h-5 w-5 ${colorScheme.iconColor}`}
+                            />
+                          </div>
+                          Редактирование профиля
+                        </CardTitle>
+                        <CardDescription>
+                          Обновите ваши личные данные и настройки
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4 flex-1">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Имя</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Ваше имя"
+                                  className="border-muted-foreground/20"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="bio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>О себе</FormLabel>
+                              <FormControl>
+                                <textarea
+                                  {...field}
+                                  className="flex min-h-[120px] w-full rounded-md border border-muted-foreground/20 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                  placeholder="Расскажите о себе"
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Краткая информация о вас, которая будет видна
+                                другим пользователям.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div
+                          className={`mt-6 p-4 rounded-lg bg-gradient-to-br ${colorScheme.gradient} ${colorScheme.border} border`}
+                        >
+                          <h3 className="font-medium mb-4 flex items-center gap-2">
+                            <LockClosedIcon
+                              className={`h-4 w-4 ${colorScheme.iconColor}`}
+                            />
+                            Сменить пароль
+                          </h3>
+
+                          <div className="space-y-4">
+                            <FormField
+                              control={form.control}
+                              name="currentPassword"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Текущий пароль</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="password"
+                                      placeholder="••••••••"
+                                      className="bg-white/70 dark:bg-black/20 border-0"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="newPassword"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Новый пароль</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="password"
+                                      placeholder="••••••••"
+                                      className="bg-white/70 dark:bg-black/20 border-0"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="confirmPassword"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Подтвердите пароль</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="password"
+                                      placeholder="••••••••"
+                                      className="bg-white/70 dark:bg-black/20 border-0"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter
+                        className={`bg-gradient-to-r ${colorScheme.footerBg} border-t ${colorScheme.footerBorder}`}
+                      >
+                        <Button
+                          type="submit"
+                          className={`w-full group ${colorScheme.buttonBg}`}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircledIcon className="mr-2 h-4 w-4 group-hover:animate-pulse" />
+                          )}
+                          Сохранить изменения
+                        </Button>
+                      </CardFooter>
+                    </form>
+                  </Form>
+                </Card>
+              </div>
+            </div>
+          </Card>
         </div>
       </main>
 

@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CrossCircledIcon } from "@radix-ui/react-icons";
 
 interface QuestionImportFormProps {
   onFileChange: (file: File) => void;
@@ -35,14 +36,14 @@ export function QuestionImportForm({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <Card className="w-full border-0 shadow-none bg-transparent">
+      <CardHeader className="px-0 pt-0">
         <CardTitle>Импорт вопросов</CardTitle>
         <CardDescription>
           Загрузите файл с вопросами в формате JSON или CSV
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0 pb-0">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="file">Выберите файл</Label>
@@ -63,8 +64,14 @@ export function QuestionImportForm({
           </div>
 
           {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="flex items-start">
+              <CrossCircledIcon className="h-4 w-4 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <AlertTitle className="mb-1">
+                  Ошибка при загрузке файла
+                </AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </div>
             </Alert>
           )}
 
