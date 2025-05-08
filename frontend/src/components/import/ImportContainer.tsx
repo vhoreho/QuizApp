@@ -75,6 +75,7 @@ export function ImportContainer() {
     file,
     title,
     description,
+    categoryId: null,
     onImportStart: handleImportStart,
     onProgress: handleImportProgress,
     onSuccess: handleImportSuccess,

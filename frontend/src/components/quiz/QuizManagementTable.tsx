@@ -140,7 +140,7 @@ export default function QuizManagementTable({
                     </div>
                   </TableCell>
                   {userRole === UserRole.ADMIN && (
-                    <TableCell>{quiz.createdById || "Неизвестно"}</TableCell>
+                    <TableCell>{quiz.createdBy || "Неизвестно"}</TableCell>
                   )}
                   <TableCell>{formatDate(quiz.createdAt)}</TableCell>
                   <TableCell>
