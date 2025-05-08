@@ -31,20 +31,18 @@ import StudentResults from "@/pages/student/Results";
 import ProfilePage from "@/pages/ProfilePage";
 import StudentProgress from "./pages/student/Progress";
 import ImportQuizPage from "./pages/ImportQuizPage";
+import CategoryManagementPage from "./pages/admin/CategoryManagement";
 
 function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Инициализируем перехватчик запросов для авторизации
-    authApi.setupAuthInterceptor();
-
-    // Добавляем обработку ошибок авторизации
+    // Add response interceptor for handling 401 errors
     api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response && error.response.status === 401) {
-          // Если получили ошибку авторизации, перенаправляем на страницу логина
+          // If we get an auth error, redirect to login
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           navigate("/login");
@@ -117,6 +115,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
               <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/categories"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <CategoryManagementPage />
             </ProtectedRoute>
           }
         />

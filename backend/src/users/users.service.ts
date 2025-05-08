@@ -10,7 +10,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) { }
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const user = this.usersRepository.create(createUserDto);
@@ -20,7 +20,7 @@ export class UsersService {
 
   async findAll(): Promise<UserResponseDto[]> {
     const users = await this.usersRepository.find();
-    return users.map(user => UserResponseDto.fromEntity(user));
+    return users.map((user) => UserResponseDto.fromEntity(user));
   }
 
   async findOne(id: number): Promise<UserResponseDto> {
@@ -57,7 +57,7 @@ export class UsersService {
   async count(excludeUserId?: number): Promise<number> {
     if (excludeUserId) {
       return this.usersRepository.count({
-        where: { id: Not(excludeUserId) }
+        where: { id: Not(excludeUserId) },
       });
     }
     return this.usersRepository.count();
@@ -73,13 +73,16 @@ export class UsersService {
         }
         const count = await this.usersRepository.count({ where: whereClause });
         return { role, count };
-      })
+      }),
     );
 
-    return counts.reduce((acc, { role, count }) => {
-      acc[role] = count;
-      return acc;
-    }, {} as Record<UserRole, number>);
+    return counts.reduce(
+      (acc, { role, count }) => {
+        acc[role] = count;
+        return acc;
+      },
+      {} as Record<UserRole, number>,
+    );
   }
 
   async findRecent(limit: number, excludeUserId?: number): Promise<UserResponseDto[]> {
@@ -89,11 +92,8 @@ export class UsersService {
       queryBuilder = queryBuilder.where('user.id != :excludeUserId', { excludeUserId });
     }
 
-    const users = await queryBuilder
-      .orderBy('user.id', 'DESC')
-      .take(limit)
-      .getMany();
+    const users = await queryBuilder.orderBy('user.id', 'DESC').take(limit).getMany();
 
-    return users.map(user => UserResponseDto.fromEntity(user));
+    return users.map((user) => UserResponseDto.fromEntity(user));
   }
-} 
+}

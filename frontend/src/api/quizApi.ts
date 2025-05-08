@@ -81,6 +81,11 @@ export const studentApi = {
     return response.data;
   },
 
+  getResultAnswers: async (resultId: number): Promise<{ result: Result, answers: Answer[] }> => {
+    const response = await api.get(`/student/results/${resultId}/answers`);
+    return response.data;
+  },
+
   getStudentDashboard: async (): Promise<any> => {
     const response = await api.get('/student/dashboard');
     return response.data;
@@ -104,9 +109,9 @@ export const teacherApi = {
     return response.data;
   },
 
-  importQuizFromFile: async (title: string, description: string, questions: any[]): Promise<Quiz> => {
+  importQuizFromFile: async (title: string, description: string, categoryId: number, questions: any[]): Promise<Quiz> => {
     try {
-      console.log('Starting quiz import with:', { title, description, questionsCount: questions.length });
+      console.log('Starting quiz import with:', { title, description, categoryId, questionsCount: questions.length });
 
       // Prepare questions for submission
       const preparedQuestions = questions.map((question, index) => {
@@ -164,6 +169,7 @@ export const teacherApi = {
       const quizResponse = await api.post('/quizzes', {
         title,
         description,
+        categoryId,
         questions: preparedQuestions,
       });
 
@@ -352,7 +358,79 @@ export const adminApi = {
 
   deleteQuestion: async (id: number): Promise<void> => {
     await api.delete(`/questions/${id}`);
-  }
+  },
+
+  importQuizFromFile: async (title: string, description: string, categoryId: number, questions: any[]): Promise<Quiz> => {
+    try {
+      console.log('Starting quiz import with:', { title, description, categoryId, questionsCount: questions.length });
+
+      // Prepare questions for submission
+      const preparedQuestions = questions.map((question, index) => {
+        console.log(`Processing question ${index + 1}:`, {
+          text: question.text?.substring(0, 30) + '...',
+          type: question.type,
+          correctAnswers: question.correctAnswers,
+          options: question.options?.length
+        });
+
+        // Create base question DTO
+        const questionDto: any = {
+          text: question.text,
+          type: question.type,
+          order: index,
+          points: question.points || 1,
+          options: question.options || [],
+        };
+
+        // Add proper fields based on question type
+        if (question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") {
+          // For SINGLE_CHOICE and TRUE_FALSE, we need a single correctAnswer, not an array
+          if (Array.isArray(question.correctAnswers) && question.correctAnswers.length > 0) {
+            questionDto.correctAnswer = question.correctAnswers[0];
+            // Remove correctAnswers array to avoid confusion with backend
+            delete questionDto.correctAnswers;
+            console.log(`Question ${index + 1} ${question.type} correctAnswer:`, questionDto.correctAnswer);
+          } else {
+            questionDto.correctAnswer = question.options[0] || "";
+            console.log(`Question ${index + 1} No correctAnswers found, defaulting to first option`);
+          }
+        } else if (question.type === "MULTIPLE_CHOICE") {
+          // For MULTIPLE_CHOICE, ensure correctAnswers is an array
+          questionDto.correctAnswers = Array.isArray(question.correctAnswers)
+            ? question.correctAnswers
+            : (question.correctAnswers ? [question.correctAnswers] : []);
+          // Remove any correctAnswer field to avoid confusion
+          delete questionDto.correctAnswer;
+          console.log(`Question ${index + 1} MULTIPLE_CHOICE correctAnswers:`, questionDto.correctAnswers);
+        } else if (question.type === "MATCHING") {
+          // For MATCHING, ensure matchingPairs is an object
+          questionDto.matchingPairs = question.matchingPairs || {};
+          // Remove any correctAnswer/correctAnswers to avoid confusion
+          delete questionDto.correctAnswer;
+          delete questionDto.correctAnswers;
+          console.log(`Question ${index + 1} MATCHING matchingPairs:`, questionDto.matchingPairs);
+        }
+
+        return questionDto;
+      });
+
+      console.log(`Prepared ${preparedQuestions.length} questions for submission`);
+
+      // Create the quiz with all questions in one request using the universal endpoint
+      const quizResponse = await api.post('/quizzes', {
+        title,
+        description,
+        categoryId,
+        questions: preparedQuestions,
+      });
+
+      console.log('Quiz with questions created successfully:', quizResponse.data);
+      return quizResponse.data;
+    } catch (error) {
+      console.error('Error importing quiz from file:', error);
+      throw error;
+    }
+  },
 };
 
 // Universal Quiz API
@@ -454,9 +532,9 @@ export const quizApi = {
     await api.delete(`/questions/${id}`);
   },
 
-  importQuizFromFile: async (title: string, description: string, questions: any[]): Promise<Quiz> => {
+  importQuizFromFile: async (title: string, description: string, categoryId: number, questions: any[]): Promise<Quiz> => {
     try {
-      console.log('Starting quiz import with:', { title, description, questionsCount: questions.length });
+      console.log('Starting quiz import with:', { title, description, categoryId, questionsCount: questions.length });
 
       // Prepare questions for submission
       const preparedQuestions = questions.map((question, index) => {
@@ -514,6 +592,7 @@ export const quizApi = {
       const quizResponse = await api.post('/quizzes', {
         title,
         description,
+        categoryId,
         questions: preparedQuestions,
       });
 

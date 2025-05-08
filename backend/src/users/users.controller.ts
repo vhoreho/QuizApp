@@ -6,7 +6,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   @Post()
   create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
@@ -22,4 +22,4 @@ export class UsersController {
   findOne(@Param('id') id: string): Promise<UserResponseDto> {
     return this.usersService.findOne(+id);
   }
-} 
+}

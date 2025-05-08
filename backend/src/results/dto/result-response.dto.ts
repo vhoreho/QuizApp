@@ -56,4 +56,4 @@ export class ResultResponseDto {
 
     return dto;
   }
-} 
+}

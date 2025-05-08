@@ -46,8 +46,9 @@ export default function AdminQuizManagement() {
   } = useRequireRole([UserRole.ADMIN]);
 
   // Получаем список всех тестов в системе
-  const { data: quizzes = [], isLoading: isQuizzesLoading } =
-    useAdminQuizzes(true);
+  const { data: quizzes = [], isLoading: isQuizzesLoading } = useAdminQuizzes(
+    {}
+  );
 
   // Мутации для действий с тестами
   const deleteQuizMutation = useDeleteQuiz();
@@ -68,7 +69,7 @@ export default function AdminQuizManagement() {
     quizId: number,
     isPublished: boolean
   ) => {
-    return updateQuizStatusMutation.mutateAsync({ id: quizId, isPublished });
+    return updateQuizStatusMutation.mutateAsync({ quizId, isPublished });
   };
 
   const handleCreateQuiz = () => {
@@ -215,6 +216,15 @@ export default function AdminQuizManagement() {
               >
                 <UploadIcon className="mr-2 h-4 w-4 group-hover:animate-bounce" />
                 Импортировать из файла
+              </Button>
+
+              <Button
+                onClick={() => navigate("/admin/categories")}
+                variant="outline"
+                className="border-blue-200 dark:border-blue-700 group"
+              >
+                <MixerHorizontalIcon className="mr-2 h-4 w-4 group-hover:animate-bounce" />
+                Управление категориями
               </Button>
             </div>
           </div>

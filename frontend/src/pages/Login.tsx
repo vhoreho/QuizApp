@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +26,7 @@ import { ThemeToggle } from "../components/theme-toggle";
 import { PAGE_TITLES, ROUTES, MESSAGES } from "@/lib/constants";
 import { toast } from "@/components/ui/use-toast";
 import { useLogin } from "@/hooks/queries/useAuth";
+import { useUser } from "@/contexts/UserContext";
 
 // Определение схемы и типа для формы входа
 const loginSchema = z.object({
@@ -40,10 +41,25 @@ export default function Login() {
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const from = location.state?.from?.pathname || ROUTES.HOME;
+  const { user } = useUser();
 
   // Используем хук для авторизации
   const loginMutation = useLogin();
   const isLoading = loginMutation.isPending;
+
+  // Проверяем наличие пользователя при загрузке страницы
+  useEffect(() => {
+    if (user) {
+      const redirectPath = getRedirectPathForRole(user.role);
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Функция для определения пути редиректа в зависимости от роли
+  const getRedirectPathForRole = (role: string) => {
+    // Всегда перенаправляем на главную страницу после входа
+    return ROUTES.HOME;
+  };
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -56,15 +72,25 @@ export default function Login() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
-      await loginMutation.mutateAsync({
+      const result = await loginMutation.mutateAsync({
         username: data.username,
         password: data.password,
       });
-      toast({
-        title: "Успех",
-        description: MESSAGES.SUCCESS.LOGIN_SUCCESS,
-      });
-      navigate(from, { replace: true });
+
+      // Проверяем, что в ответе есть токен доступа
+      if (result && result.access_token) {
+        toast({
+          title: "Успех",
+          description: MESSAGES.SUCCESS.LOGIN_SUCCESS,
+        });
+
+        // Перенаправляем пользователя в соответствии с его ролью
+        const redirectPath = getRedirectPathForRole(result.user.role);
+        navigate(redirectPath, { replace: true });
+      } else {
+        // Если токена нет, значит что-то пошло не так
+        throw new Error("Ошибка входа: Отсутствует токен доступа");
+      }
     } catch (error) {
       console.error("Login error:", error);
       setError(MESSAGES.ERRORS.LOGIN_FAILED);

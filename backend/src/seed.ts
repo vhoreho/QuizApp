@@ -33,10 +33,10 @@ async function bootstrap() {
     // Create the admin user
     const adminUser = {
       username: 'admin',
-      password: 'admin123',  // This will be hashed by the auth service
+      password: 'admin123', // This will be hashed by the auth service
       email: 'admin@quizapp.com',
       name: 'Administrator',
-      role: UserRole.ADMIN
+      role: UserRole.ADMIN,
     };
 
     // We need to hash the password before saving
@@ -46,7 +46,7 @@ async function bootstrap() {
     // to bypass the "only admins can create users" restriction
     await usersService.create({
       ...adminUser,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     logger.log('Admin user created successfully!');
@@ -54,7 +54,6 @@ async function bootstrap() {
     logger.log('Password: admin123');
 
     await app.close();
-
   } catch (error) {
     logger.error('Error during seeding process');
     logger.error(error);
@@ -62,4 +61,4 @@ async function bootstrap() {
   }
 }
 
-bootstrap(); 
+bootstrap();

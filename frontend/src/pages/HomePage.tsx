@@ -13,7 +13,6 @@ import { useUser } from "@/contexts/UserContext";
 const HomePage = () => {
   // Get user data from context instead of local state
   const { user, isLoading: isUserLoading } = useUser();
-  console.log("🚀 ~ HomePage ~ user:", user);
 
   const {
     data: quizzes,

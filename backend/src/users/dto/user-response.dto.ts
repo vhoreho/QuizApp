@@ -15,4 +15,4 @@ export class UserResponseDto {
     const { password, ...userData } = user;
     return new UserResponseDto(userData);
   }
-} 
+}

@@ -10,11 +10,11 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
     const user = await this.usersService.findByUsername(username);
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       const { password, ...result } = user;
       return result;
     }
@@ -50,4 +50,4 @@ export class AuthService {
     const user = await this.usersService.create(userData);
     return user; // Уже безопасный объект благодаря использованию UserResponseDto в сервисе
   }
-} 
+}

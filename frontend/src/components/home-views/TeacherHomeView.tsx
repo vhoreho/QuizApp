@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { User } from "@/lib/types";
 import { QuizCard } from "@/components/quiz/QuizCard";
@@ -15,6 +15,8 @@ export const TeacherHomeView = ({
   quizzes,
   currentUser,
 }: TeacherHomeViewProps) => {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -45,6 +47,9 @@ export const TeacherHomeView = ({
               userRole={UserRole.TEACHER}
               showBadges={true}
               className="h-full"
+              onViewResults={() =>
+                navigate(`/teacher/quizzes/${quiz.id}/results`)
+              }
             />
           ))}
         </div>

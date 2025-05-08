@@ -1,20 +1,27 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { Quiz } from '../../quizzes/entities/quiz.entity';
+import { Quiz } from '../../quiz-system/quizzes/entities/quiz.entity';
 
 @Entity()
 export class Result {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, user => user.results, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.results, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({ name: 'user_id' })
   userId: number;
 
-  @ManyToOne(() => Quiz, quiz => quiz.results, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Quiz, (quiz) => quiz.results, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quiz_id' })
   quiz: Quiz;
 
@@ -41,4 +48,4 @@ export class Result {
 
   @CreateDateColumn()
   createdAt: Date;
-} 
+}

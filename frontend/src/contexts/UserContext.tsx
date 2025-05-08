@@ -43,16 +43,29 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   // Function to fetch user data
   const fetchUser = async () => {
-    setIsLoading(true);
-    setError(null);
     try {
+      // Проверяем наличие токена перед попыткой запроса данных пользователя
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setIsLoading(false);
+        setUser(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
       const userData = await authApi.getProfile();
       setUser(userData);
     } catch (err) {
+      console.error("Error fetching user data:", err);
       setError(
         err instanceof Error ? err : new Error("Failed to fetch user data")
       );
       setUser(null);
+      // Clear invalid token
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +73,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   // Load user data on initial mount
   useEffect(() => {
+    // Ensure auth interceptor is set up before fetching user data
+    authApi.setupAuthInterceptor();
     fetchUser();
   }, []);
 
@@ -71,8 +86,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   // Logout function
   const logout = () => {
     setUser(null);
-    // You might want to call your logout API here
-    // and clear any stored tokens
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   };
 
   // Value object that will be provided to consumers

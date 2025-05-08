@@ -3,12 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { ResultResponseDto } from './dto/result-response.dto';
+import { Answer } from '../quiz-system/answers/entities/answer.entity';
 
 @Injectable()
 export class ResultsService {
   constructor(
     @InjectRepository(Result)
     private resultsRepository: Repository<Result>,
+    @InjectRepository(Answer)
+    private answersRepository: Repository<Answer>,
   ) { }
 
   async findAll(filters?: {
@@ -18,7 +21,8 @@ export class ResultsService {
     dateTo?: string;
     includePractice?: boolean;
   }): Promise<ResultResponseDto[]> {
-    const query = this.resultsRepository.createQueryBuilder('result')
+    const query = this.resultsRepository
+      .createQueryBuilder('result')
       .leftJoinAndSelect('result.user', 'user')
       .leftJoinAndSelect('result.quiz', 'quiz');
 
@@ -30,19 +34,19 @@ export class ResultsService {
     if (filters) {
       if (filters.username) {
         query.andWhere('LOWER(user.username) LIKE :username', {
-          username: `%${filters.username.toLowerCase()}%`
+          username: `%${filters.username.toLowerCase()}%`,
         });
       }
 
       if (filters.quizTitle) {
         query.andWhere('LOWER(quiz.title) LIKE :quizTitle', {
-          quizTitle: `%${filters.quizTitle.toLowerCase()}%`
+          quizTitle: `%${filters.quizTitle.toLowerCase()}%`,
         });
       }
 
       if (filters.dateFrom) {
         query.andWhere('result.createdAt >= :dateFrom', {
-          dateFrom: new Date(filters.dateFrom)
+          dateFrom: new Date(filters.dateFrom),
         });
       }
 
@@ -55,7 +59,7 @@ export class ResultsService {
     }
 
     const results = await query.orderBy('result.createdAt', 'DESC').getMany();
-    return results.map(result => ResultResponseDto.fromEntity(result));
+    return results.map((result) => ResultResponseDto.fromEntity(result));
   }
 
   async findOne(id: number): Promise<ResultResponseDto> {
@@ -78,11 +82,15 @@ export class ResultsService {
       order: { id: 'DESC' },
     });
 
-    return results.map(result => ResultResponseDto.fromEntity(result));
+    return results.map((result) => ResultResponseDto.fromEntity(result));
   }
 
-  async findByQuizId(quizId: number, includePractice: boolean = false): Promise<ResultResponseDto[]> {
-    const queryBuilder = this.resultsRepository.createQueryBuilder('result')
+  async findByQuizId(
+    quizId: number,
+    includePractice: boolean = false,
+  ): Promise<ResultResponseDto[]> {
+    const queryBuilder = this.resultsRepository
+      .createQueryBuilder('result')
       .leftJoinAndSelect('result.user', 'user')
       .where('result.quizId = :quizId', { quizId });
 
@@ -91,7 +99,7 @@ export class ResultsService {
     }
 
     const results = await queryBuilder.orderBy('result.score', 'DESC').getMany();
-    return results.map(result => ResultResponseDto.fromEntity(result));
+    return results.map((result) => ResultResponseDto.fromEntity(result));
   }
 
   async count(): Promise<number> {
@@ -99,7 +107,8 @@ export class ResultsService {
   }
 
   async getAverageScoreByQuiz(quizId: number, includePractice: boolean = false): Promise<number> {
-    const queryBuilder = this.resultsRepository.createQueryBuilder('result')
+    const queryBuilder = this.resultsRepository
+      .createQueryBuilder('result')
       .where('result.quizId = :quizId', { quizId });
 
     if (!includePractice) {
@@ -127,11 +136,11 @@ export class ResultsService {
     }
 
     const totalQuizzes = results.length;
-    const scores = results.map(result => result.score);
+    const scores = results.map((result) => result.score);
     const averageScore = scores.reduce((a, b) => a + b, 0) / totalQuizzes;
     const highestScore = Math.max(...scores);
     const lowestScore = Math.min(...scores);
-    const quizzesPassed = scores.filter(score => score >= 6).length;
+    const quizzesPassed = scores.filter((score) => score >= 6).length;
 
     return {
       totalQuizzes,
@@ -158,19 +167,23 @@ export class ResultsService {
 
   async hasUserTakenQuiz(userId: number, quizId: number): Promise<boolean> {
     const count = await this.resultsRepository.count({
-      where: { userId, quizId }
+      where: { userId, quizId },
     });
     return count > 0;
   }
 
-  async findByTeacherId(teacherId: number, filters?: {
-    username?: string;
-    quizTitle?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    includePractice?: boolean;
-  }): Promise<ResultResponseDto[]> {
-    const query = this.resultsRepository.createQueryBuilder('result')
+  async findByTeacherId(
+    teacherId: number,
+    filters?: {
+      username?: string;
+      quizTitle?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      includePractice?: boolean;
+    },
+  ): Promise<ResultResponseDto[]> {
+    const query = this.resultsRepository
+      .createQueryBuilder('result')
       .leftJoinAndSelect('result.user', 'user')
       .leftJoinAndSelect('result.quiz', 'quiz')
       .where('quiz.createdById = :teacherId', { teacherId });
@@ -183,19 +196,19 @@ export class ResultsService {
     if (filters) {
       if (filters.username) {
         query.andWhere('LOWER(user.username) LIKE :username', {
-          username: `%${filters.username.toLowerCase()}%`
+          username: `%${filters.username.toLowerCase()}%`,
         });
       }
 
       if (filters.quizTitle) {
         query.andWhere('LOWER(quiz.title) LIKE :quizTitle', {
-          quizTitle: `%${filters.quizTitle.toLowerCase()}%`
+          quizTitle: `%${filters.quizTitle.toLowerCase()}%`,
         });
       }
 
       if (filters.dateFrom) {
         query.andWhere('result.createdAt >= :dateFrom', {
-          dateFrom: new Date(filters.dateFrom)
+          dateFrom: new Date(filters.dateFrom),
         });
       }
 
@@ -207,6 +220,30 @@ export class ResultsService {
     }
 
     const results = await query.orderBy('result.createdAt', 'DESC').getMany();
-    return results.map(result => ResultResponseDto.fromEntity(result));
+    return results.map((result) => ResultResponseDto.fromEntity(result));
   }
-} 
+
+  async getAnswersByResultId(resultId: number): Promise<Answer[]> {
+    // Сначала получаем результат, чтобы узнать quizId и userId
+    const result = await this.resultsRepository.findOne({
+      where: { id: resultId },
+    });
+
+    if (!result) {
+      throw new NotFoundException(`Result with ID ${resultId} not found`);
+    }
+
+    // Получаем ответы пользователя для данного теста
+    const answers = await this.answersRepository.find({
+      where: {
+        userId: result.userId,
+        question: {
+          quizId: result.quizId,
+        },
+      },
+      relations: ['question'],
+    });
+
+    return answers;
+  }
+}
