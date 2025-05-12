@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { UserRole } from "../lib/types";
+import { UserRole, User } from "../lib/types";
 import {
   Card,
   CardContent,
@@ -27,6 +27,7 @@ import { Header } from "../components/layout/header";
 import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
 import { useAdminDashboardStats } from "@/hooks/queries/useStats";
 import { Badge } from "@/components/ui/badge";
+import { isValidUser } from "@/lib/utils";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

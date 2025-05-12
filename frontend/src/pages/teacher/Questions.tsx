@@ -16,6 +16,7 @@ import { Badge } from "../../components/ui/badge";
 import { useToast } from "../../components/ui/use-toast";
 import api from "../../api/axiosConfig";
 import { authApi } from "../../api/auth";
+import { isValidUser } from "@/lib/utils";
 
 interface Question {
   id: number;
@@ -222,7 +223,10 @@ export default function TeacherQuestions() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser!} onLogout={handleLogout} />
+      <Header
+        user={isValidUser(currentUser) ? currentUser : null}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

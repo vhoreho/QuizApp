@@ -1,18 +1,17 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 
-config(); // Load environment variables
+config();
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '5432'),
-  username: process.env.DATABASE_USER || 'postgres',
-  password: process.env.DATABASE_PASSWORD || 'postgres',
-  database: process.env.DATABASE_NAME || 'quizapp',
-  synchronize: false,
-  logging: process.env.NODE_ENV !== 'production',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  username: process.env.DB_USERNAME || 'quizuser',
+  password: process.env.DB_PASSWORD || 'quizpassword',
+  database: process.env.DB_DATABASE || 'quizdb',
   entities: ['src/**/*.entity.ts'],
   migrations: ['src/migrations/*.ts'],
-  subscribers: [],
-});
+  synchronize: false,
+  logging: true,
+}); 

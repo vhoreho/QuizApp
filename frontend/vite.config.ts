@@ -38,8 +38,10 @@ export default defineConfig({
     })
   ],
   server: {
-    host: '0.0.0.0',
-    port: 5173,
+    host: process.env.HOST || '0.0.0.0',
+    port: parseInt(process.env.PORT || '5173'),
+    strictPort: true,
+    cors: true,
   },
   resolve: {
     alias: {

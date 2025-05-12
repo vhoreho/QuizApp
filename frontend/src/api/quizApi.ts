@@ -481,7 +481,7 @@ export const quizApi = {
   },
 
   getAllQuizzes: async (withDetails: boolean = false): Promise<Quiz[]> => {
-    const response = await api.get(`/quizzes?withDetails=${withDetails}`);
+    const response = await api.get(`/quizzes`);
     return response.data;
   },
 

@@ -10,6 +10,8 @@ import {
   ParseIntPipe,
   Query,
   Patch,
+  Request,
+  Logger,
 } from '@nestjs/common';
 import { QuizzesService } from './quizzes.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
@@ -23,23 +25,22 @@ import { UpdateQuizStatusDto } from './dto/update-quiz-status.dto';
 
 @Controller('quizzes')
 export class QuizzesController {
+  private readonly logger = new Logger(QuizzesController.name);
+
   constructor(private readonly quizzesService: QuizzesService) { }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
-  create(@Body() createQuizDto: CreateQuizDto, @Req() req: any) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        const error = new Error('User ID not found in request');
-        throw error;
-      }
+  async create(@Body() createQuizDto: CreateQuizDto, @Request() req) {
+    this.logger.debug(`Received quiz creation request with data: ${JSON.stringify(createQuizDto)}`);
+    this.logger.debug(`User ID from request: ${req.user.id}`);
 
-      return this.quizzesService.create(createQuizDto, userId);
+    try {
+      const quiz = await this.quizzesService.create(createQuizDto, req.user.id);
+      this.logger.debug(`Successfully created quiz with ID: ${quiz.id}`);
+      return quiz;
     } catch (error) {
-      console.error('❌ ~ QuizzesController ~ create ~ error:', error.message);
-      console.error('Stack trace:', error.stack);
+      this.logger.error(`Error creating quiz: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -65,21 +66,10 @@ export class QuizzesController {
 
   @Get('homepage')
   @UseGuards(JwtAuthGuard)
-  getHomepageQuizzes(@Req() req: any) {
+  getHomepageData(@Req() req: any) {
     const userId = req.user?.id;
     const userRole = req.user?.role;
-
-    // Для разных ролей разная логика получения тестов
-    if (userRole === UserRole.ADMIN) {
-      // Админы видят последние созданные тесты (с ограничением по количеству)
-      return this.quizzesService.getRecentQuizzes(5, false);
-    } else if (userRole === UserRole.TEACHER) {
-      // Преподаватели видят свои последние тесты
-      return this.quizzesService.findAllWithDetails(true, userId, null, false);
-    } else {
-      // Студенты видят последние опубликованные тесты
-      return this.quizzesService.getRecentQuizzes(5, true);
-    }
+    return this.quizzesService.getHomepageData(userId, userRole);
   }
 
   @Get(':id')

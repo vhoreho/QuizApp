@@ -28,7 +28,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { UserRole } from "@/lib/types";
+import { UserRole, User } from "@/lib/types";
 import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
 import {
   useAdminQuizById,
@@ -115,6 +115,17 @@ export default function AdminQuizResultsPage() {
     ];
   };
 
+  // Проверка валидности пользователя
+  const isValidUser = (user: any): user is User => {
+    return (
+      user &&
+      typeof user === "object" &&
+      "id" in user &&
+      "username" in user &&
+      "role" in user
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -141,7 +152,7 @@ export default function AdminQuizResultsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

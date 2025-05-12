@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,9 +15,16 @@ import { QuestionsService } from '../questions/questions.service';
 import { Result } from '../results/entities/result.entity';
 import { UpdateQuizStatusDto } from './dto/update-quiz-status.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
+import { CategoriesService } from '../categories/categories.service';
+import { HomepageResponseDto } from './dto/homepage-response.dto';
+import { QuizResponseDto } from './dto/quiz-response.dto';
+import { ResultResponseDto } from '../results/dto/result-response.dto';
+import { UserRole } from '../../users/entities/user.entity';
 
 @Injectable()
 export class QuizzesService {
+  private readonly logger = new Logger(QuizzesService.name);
+
   constructor(
     @InjectRepository(Quiz)
     private quizzesRepository: Repository<Quiz>,
@@ -24,12 +32,23 @@ export class QuizzesService {
     private resultsRepository: Repository<Result>,
     private usersService: UsersService,
     private questionsService: QuestionsService,
+    private categoriesService: CategoriesService,
   ) { }
 
   async create(createQuizDto: CreateQuizDto, userId: number): Promise<Quiz> {
+    this.logger.debug(`Creating quiz with data: ${JSON.stringify(createQuizDto)}`);
+
     try {
       // Проверяем существование пользователя
       await this.usersService.findOne(userId);
+
+      // Проверяем существование категории
+      try {
+        await this.categoriesService.findOne(createQuizDto.categoryId);
+      } catch (error) {
+        this.logger.error(`Error checking category: ${error.message}`, error.stack);
+        throw new BadRequestException(`Категория с ID ${createQuizDto.categoryId} не найдена`);
+      }
 
       // Extract questions from the DTO
       const { questions, ...quizData } = createQuizDto;
@@ -295,5 +314,88 @@ export class QuizzesService {
 
   async getRecentQuizzes(limit: number, publishedOnly: boolean = false): Promise<Quiz[]> {
     return this.findRecent(limit, publishedOnly);
+  }
+
+  async getHomepageData(userId: number, userRole: UserRole): Promise<HomepageResponseDto> {
+    const [quizzes, categories] = await Promise.all([
+      this.getQuizzesForRole(userId, userRole),
+      this.categoriesService.findAll()
+    ]);
+
+    const stats = await this.getStatsForRole(userId, userRole);
+
+    return new HomepageResponseDto({
+      userRole,
+      quizzes,
+      categories,
+      stats
+    });
+  }
+
+  private async getQuizzesForRole(userId: number, userRole: UserRole): Promise<QuizResponseDto[]> {
+    let quizzes: Quiz[];
+
+    switch (userRole) {
+      case UserRole.ADMIN:
+        quizzes = await this.findAllWithDetails(true, null, null, true);
+        break;
+      case UserRole.TEACHER:
+        quizzes = await this.findAllWithDetails(true, userId, null, false);
+        break;
+      default: // STUDENT
+        quizzes = await this.findAllWithDetails(true, null, true, false);
+    }
+
+    return quizzes.map(quiz => QuizResponseDto.fromEntity(quiz));
+  }
+
+  private async getStatsForRole(userId: number, userRole: UserRole) {
+    const stats: any = {};
+
+    switch (userRole) {
+      case UserRole.ADMIN:
+        const [totalQuizzes, totalUsers, totalCategories] = await Promise.all([
+          this.quizzesRepository.count(),
+          this.usersService.count(),
+          this.categoriesService.count()
+        ]);
+        stats.totalQuizzes = totalQuizzes;
+        stats.totalUsers = totalUsers;
+        stats.totalCategories = totalCategories;
+        break;
+
+      case UserRole.TEACHER:
+        const [teacherQuizzes, teacherResults] = await Promise.all([
+          this.quizzesRepository.count({ where: { createdById: userId } }),
+          this.resultsRepository.find({
+            where: { quiz: { createdById: userId } },
+            relations: ['quiz', 'user'],
+            order: { createdAt: 'DESC' },
+            take: 5
+          })
+        ]);
+        stats.totalQuizzes = teacherQuizzes;
+        stats.recentResults = teacherResults.map(result => ResultResponseDto.fromEntity(result));
+        break;
+
+      default: // STUDENT
+        const [studentResults, averageScore] = await Promise.all([
+          this.resultsRepository.find({
+            where: { userId },
+            relations: ['quiz'],
+            order: { createdAt: 'DESC' },
+            take: 5
+          }),
+          this.resultsRepository
+            .createQueryBuilder('result')
+            .where('result.userId = :userId', { userId })
+            .select('AVG(result.score)', 'average')
+            .getRawOne()
+        ]);
+        stats.recentResults = studentResults.map(result => ResultResponseDto.fromEntity(result));
+        stats.averageScore = parseFloat(averageScore?.average || '0');
+    }
+
+    return stats;
   }
 }

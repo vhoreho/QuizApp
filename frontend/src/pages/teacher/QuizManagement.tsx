@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/button";
 import { ArrowLeftIcon, UploadIcon } from "@radix-ui/react-icons";
 import { useRequireRole } from "@/hooks/queries/useAuth";
 import { useLogout } from "@/hooks/queries/useAuth";
-import { UserRole } from "@/lib/types";
+import { UserRole, User } from "@/lib/types";
 import { ROUTES } from "@/lib/constants";
 import {
   useTeacherQuizzes,
@@ -12,6 +12,7 @@ import {
   useTeacherUpdateQuizStatus,
 } from "@/hooks/queries/useQuizzes";
 import QuizManagementTable from "@/components/quiz/QuizManagementTable";
+import { isValidUser } from "@/lib/utils";
 
 export default function TeacherQuizManagement() {
   const navigate = useNavigate();
@@ -70,7 +71,7 @@ export default function TeacherQuizManagement() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

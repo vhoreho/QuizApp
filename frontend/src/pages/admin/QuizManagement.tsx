@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../../components/layout/header";
 import { Footer } from "../../components/layout/footer";
@@ -10,29 +9,21 @@ import {
   TableIcon,
   StackIcon,
   MixerHorizontalIcon,
-  DashboardIcon,
   CheckCircledIcon,
   Cross2Icon,
   UploadIcon,
 } from "@radix-ui/react-icons";
 import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
-import { UserRole } from "@/lib/types";
+import { UserRole, User } from "@/lib/types";
 import { ROUTES } from "@/lib/constants";
 import {
   useAdminQuizzes,
   useDeleteQuiz,
   useUpdateQuizStatus,
 } from "@/hooks/queries/useQuizzes";
-import { QuizManager } from "@/components/quiz/QuizManager";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QuizManager } from "@/components/quiz/QuizManager";
 
 export default function AdminQuizManagement() {
   const navigate = useNavigate();
@@ -49,6 +40,7 @@ export default function AdminQuizManagement() {
   const { data: quizzes = [], isLoading: isQuizzesLoading } = useAdminQuizzes(
     {}
   );
+  console.log("🚀 ~ AdminQuizManagement ~ quizzes:", quizzes);
 
   // Мутации для действий с тестами
   const deleteQuizMutation = useDeleteQuiz();
@@ -84,6 +76,17 @@ export default function AdminQuizManagement() {
     await logoutMutation.mutateAsync();
   };
 
+  // Проверка валидности пользователя
+  const isValidUser = (user: any): user is User => {
+    return (
+      user &&
+      typeof user === "object" &&
+      "id" in user &&
+      "username" in user &&
+      "role" in user
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -97,7 +100,7 @@ export default function AdminQuizManagement() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

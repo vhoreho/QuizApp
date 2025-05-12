@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { studentApi, teacherApi, adminApi } from "@/api/quizApi";
+import { studentApi, teacherApi, adminApi, quizApi } from "@/api/quizApi";
 import { UserRole } from "@/lib/types";
 import { PAGE_TITLES, MESSAGES } from "@/lib/constants";
 import { useStudentResults } from "@/hooks/queries/useQuizzes";
@@ -20,20 +20,7 @@ const HomePage = () => {
     error,
   } = useQuery({
     queryKey: ["quizzes", user?.role],
-    queryFn: async () => {
-      if (!user) return [];
-
-      switch (user.role) {
-        case UserRole.STUDENT:
-          return studentApi.getAvailableQuizzes();
-        case UserRole.TEACHER:
-          return teacherApi.getMyQuizzes();
-        case UserRole.ADMIN:
-          return adminApi.getAllQuizzes();
-        default:
-          return [];
-      }
-    },
+    queryFn: async () => quizApi.getAllQuizzes(),
     enabled: !!user,
   });
 

@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { UserRole } from "@/lib/types";
+import { UserRole, User } from "@/lib/types";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useRequireRole } from "@/hooks/queries/useAuth";
 import { CategoryManagement } from "@/components/quiz/CategoryManagement";
+import { isValidUser } from "@/lib/utils";
 
 export default function CategoryManagementPage() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function CategoryManagementPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={() => {}} />
+      <Header user={isValidUser(user) ? user : null} onLogout={() => {}} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

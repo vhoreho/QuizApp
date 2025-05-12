@@ -37,7 +37,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
-import { UserRole } from "@/lib/types";
+import { UserRole, User } from "@/lib/types";
 import { useAllResults } from "@/hooks/queries/useQuizzes";
 import {
   Popover,
@@ -221,6 +221,17 @@ export default function AdminResultsPage() {
     }
   };
 
+  // Проверка валидности пользователя
+  const isValidUser = (user: any): user is User => {
+    return (
+      user &&
+      typeof user === "object" &&
+      "id" in user &&
+      "username" in user &&
+      "role" in user
+    );
+  };
+
   if (isUserLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -234,7 +245,7 @@ export default function AdminResultsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { toast } from "@/components/ui/use-toast";
+import { formatDate, renderUserInfo } from "@/lib/utils";
 
 interface QuizManagementTableProps {
   userRole: UserRole;
@@ -37,14 +38,6 @@ export default function QuizManagementTable({
   onUpdateQuizStatus,
 }: QuizManagementTableProps) {
   const navigate = useNavigate();
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
 
   if (isLoading) {
     return (
@@ -140,7 +133,7 @@ export default function QuizManagementTable({
                     </div>
                   </TableCell>
                   {userRole === UserRole.ADMIN && (
-                    <TableCell>{quiz.createdBy || "Неизвестно"}</TableCell>
+                    <TableCell>{renderUserInfo(quiz.createdBy)}</TableCell>
                   )}
                   <TableCell>{formatDate(quiz.createdAt)}</TableCell>
                   <TableCell>

@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'debug', 'log', 'verbose'],
+  });
 
   // Enhanced ValidationPipe configuration
   app.useGlobalPipes(
@@ -41,8 +45,8 @@ async function bootstrap() {
 
   await app.listen(port, host);
 
-  console.log(`🚀 Application is running on: http://${host}:${port}`);
-  console.log(`Server started successfully at ${new Date().toISOString()}`);
+  logger.log(`🚀 Application is running on: http://${host}:${port}`);
+  logger.log(`Server started successfully at ${new Date().toISOString()}`);
 }
 bootstrap().catch((err) => {
   console.error('Error during application bootstrap', err);

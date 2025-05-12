@@ -35,11 +35,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
-import { UserRole, Result } from "@/lib/types";
+import { UserRole, Result, User } from "@/lib/types";
 import {
   useTeacherQuizzes,
   useTeacherMyResults,
 } from "@/hooks/queries/useQuizzes";
+import { isValidUser } from "@/lib/utils";
 
 export default function TeacherResultsPage() {
   const navigate = useNavigate();
@@ -185,7 +186,7 @@ export default function TeacherResultsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={user!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
