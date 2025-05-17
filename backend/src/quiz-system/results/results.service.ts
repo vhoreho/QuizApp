@@ -12,7 +12,7 @@ export class ResultsService {
     private resultsRepository: Repository<Result>,
     @InjectRepository(Answer)
     private answersRepository: Repository<Answer>,
-  ) {}
+  ) { }
 
   async findAll(filters?: {
     username?: string;
@@ -77,7 +77,7 @@ export class ResultsService {
 
   async findByUserId(userId: number): Promise<ResultResponseDto[]> {
     const results = await this.resultsRepository.find({
-      where: { userId },
+      where: { user: { id: userId } },
       relations: ['quiz'],
       order: { id: 'DESC' },
     });

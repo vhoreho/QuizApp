@@ -199,16 +199,16 @@ export function QuizCard({
 
       <CardContent className="flex-grow pt-2">
         <div className="space-y-2.5 text-sm text-muted-foreground">
-          {(quiz as any).category && (
+          {(quiz as any).subject && (
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground font-semibold text-xs">
                   #
                 </span>
-                <span>Категория:</span>
+                <span>Предмет:</span>
               </div>
               <Badge variant="outline" className="font-medium text-primary">
-                {(quiz as any).category}
+                {(quiz as any).subject}
               </Badge>
             </div>
           )}

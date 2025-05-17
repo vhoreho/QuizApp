@@ -25,10 +25,18 @@ api.interceptors.request.use(
     // Если токен существует, добавляем его в заголовки
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      if (isDevelopment) {
+        console.log(`Adding Authorization header with token for ${config.url}`);
+      }
+    } else {
+      if (isDevelopment) {
+        console.warn(`No token found for request to ${config.url}`);
+      }
     }
 
     if (isDevelopment) {
       console.log(`Request to ${config.url} with method ${config.method}`);
+      console.log('Request headers:', config.headers);
     }
 
     return config;
@@ -42,31 +50,25 @@ api.interceptors.request.use(
 // Add response interceptor
 api.interceptors.response.use(
   (response) => {
+    // Any status code that lie within the range of 2xx cause this function to trigger
     if (isDevelopment) {
-      console.log(`Response from ${response.config.url}: ${response.status}`);
+      console.log(`Response from ${response.config.url}:`, response.status);
     }
     return response;
   },
   (error) => {
-    // Логируем HTTP ошибки
-    const status = error.response?.status;
-    const url = error.config?.url;
-    const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
-
-    // Формируем сообщение об ошибке
-    const errorMessage = error.response?.data?.message || error.message;
-    const fullMessage = `HTTP Error ${status}: ${errorMessage} [${method} ${url}]`;
-
-    // Логируем ошибку в консоль
-    console.error(fullMessage);
-    console.error('API Error details:', {
-      status,
-      method,
-      url,
-      data: error.config?.data,
-      responseData: error.response?.data,
-    });
-
+    // Any status codes that falls outside the range of 2xx cause this function to trigger
+    if (error.response) {
+      console.error(
+        `Error response from ${error.config?.url}:`,
+        error.response.status,
+        error.response.data
+      );
+    } else if (error.request) {
+      console.error('Error request:', error.request);
+    } else {
+      console.error('Error message:', error.message);
+    }
     return Promise.reject(error);
   }
 );

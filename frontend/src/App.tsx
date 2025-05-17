@@ -31,7 +31,7 @@ import StudentResults from "@/pages/student/Results";
 import ProfilePage from "@/pages/ProfilePage";
 import StudentProgress from "./pages/student/Progress";
 import ImportQuizPage from "./pages/ImportQuizPage";
-import CategoryManagementPage from "./pages/admin/CategoryManagement";
+import SubjectManagementPage from "./pages/admin/SubjectManagement";
 
 function App() {
   const navigate = useNavigate();
@@ -119,10 +119,10 @@ function App() {
           }
         />
         <Route
-          path="/admin/categories"
+          path="/admin/subjects"
           element={
             <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-              <CategoryManagementPage />
+              <SubjectManagementPage />
             </ProtectedRoute>
           }
         />

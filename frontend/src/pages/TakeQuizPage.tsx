@@ -27,6 +27,7 @@ import { toast } from "@/components/ui/use-toast";
 import { ROUTES, MESSAGES } from "@/lib/constants";
 import { Answer, Question } from "@/lib/types";
 import { QuestionRenderer } from "@/components/questions/QuestionRenderer";
+import { getUserIdFromLocalStorage, checkAuthStatus } from "@/utils/authCheck";
 import {
   TimerIcon,
   ReloadIcon,
@@ -268,7 +269,7 @@ const TakeQuizPage = () => {
     }
   };
 
-  const handleSubmitQuiz = () => {
+  const handleSubmitQuiz = async () => {
     if (id && questions) {
       const answeredQuestions = answers.length;
       const totalQuestions = questions.length;
@@ -283,11 +284,47 @@ const TakeQuizPage = () => {
         return;
       }
 
-      // Отправляем данные с указанием quizId
-      submitQuizMutation.mutate({
-        quizId: Number(id),
-        answers: answers,
-      });
+      // Check authentication status before submitting
+      try {
+        const authStatus = await checkAuthStatus();
+        if (!authStatus.isAuthenticated) {
+          toast({
+            variant: "destructive",
+            title: "Ошибка аутентификации",
+            description: "Ваша сессия истекла. Пожалуйста, войдите снова.",
+          });
+          navigate(ROUTES.LOGIN);
+          return;
+        }
+
+        // Get user ID from local storage as a backup
+        const userId = getUserIdFromLocalStorage();
+        if (!userId) {
+          toast({
+            variant: "destructive",
+            title: "Ошибка аутентификации",
+            description:
+              "Не удалось определить ID пользователя. Пожалуйста, войдите снова.",
+          });
+          navigate(ROUTES.LOGIN);
+          return;
+        }
+
+        console.log("Submitting quiz with user ID:", userId);
+
+        // Отправляем данные с указанием quizId
+        submitQuizMutation.mutate({
+          quizId: Number(id),
+          answers: answers,
+        });
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "Произошла ошибка при проверке аутентификации.",
+        });
+      }
     }
   };
 

@@ -1,5 +1,5 @@
 import api from './axiosConfig';
-import { User, Quiz, Question, Answer, Result, QuestionType, UserRole } from '../lib/types';
+import { User, Quiz, Question, Answer, Result, QuestionType, UserRole, Subject } from '../lib/types';
 import type { QuizResult } from '../lib/types';
 
 export interface SubmitQuizDto {
@@ -67,8 +67,17 @@ export const studentApi = {
   },
 
   submitQuiz: async (quizId: number, submitQuizDto: SubmitQuizDto): Promise<QuizResult> => {
-    const response = await api.post(`/student/quizzes/${quizId}/submit`, submitQuizDto);
-    return response.data;
+    // Debug logging
+    console.log('Submitting quiz with ID:', quizId);
+    console.log('Auth token present:', !!localStorage.getItem('token'));
+
+    try {
+      const response = await api.post(`/student/quizzes/${quizId}/submit`, submitQuizDto);
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
+      throw error;
+    }
   },
 
   getMyResults: async (): Promise<Result[]> => {
@@ -109,9 +118,9 @@ export const teacherApi = {
     return response.data;
   },
 
-  importQuizFromFile: async (title: string, description: string, categoryId: number, questions: any[]): Promise<Quiz> => {
+  importQuizFromFile: async (title: string, description: string, subjectId: number, questions: any[]): Promise<Quiz> => {
     try {
-      console.log('Starting quiz import with:', { title, description, categoryId, questionsCount: questions.length });
+      console.log('Starting quiz import with:', { title, description, subjectId, questionsCount: questions.length });
 
       // Prepare questions for submission
       const preparedQuestions = questions.map((question, index) => {
@@ -169,7 +178,7 @@ export const teacherApi = {
       const quizResponse = await api.post('/quizzes', {
         title,
         description,
-        categoryId,
+        subjectId,
         questions: preparedQuestions,
       });
 
@@ -360,9 +369,9 @@ export const adminApi = {
     await api.delete(`/questions/${id}`);
   },
 
-  importQuizFromFile: async (title: string, description: string, categoryId: number, questions: any[]): Promise<Quiz> => {
+  importQuizFromFile: async (title: string, description: string, subjectId: number, questions: any[]): Promise<Quiz> => {
     try {
-      console.log('Starting quiz import with:', { title, description, categoryId, questionsCount: questions.length });
+      console.log('Starting quiz import with:', { title, description, subjectId, questionsCount: questions.length });
 
       // Prepare questions for submission
       const preparedQuestions = questions.map((question, index) => {
@@ -420,7 +429,7 @@ export const adminApi = {
       const quizResponse = await api.post('/quizzes', {
         title,
         description,
-        categoryId,
+        subjectId,
         questions: preparedQuestions,
       });
 
@@ -532,9 +541,9 @@ export const quizApi = {
     await api.delete(`/questions/${id}`);
   },
 
-  importQuizFromFile: async (title: string, description: string, categoryId: number, questions: any[]): Promise<Quiz> => {
+  importQuizFromFile: async (title: string, description: string, subjectId: number, questions: any[]): Promise<Quiz> => {
     try {
-      console.log('Starting quiz import with:', { title, description, categoryId, questionsCount: questions.length });
+      console.log('Starting quiz import with:', { title, description, subjectId, questionsCount: questions.length });
 
       // Prepare questions for submission
       const preparedQuestions = questions.map((question, index) => {
@@ -592,7 +601,7 @@ export const quizApi = {
       const quizResponse = await api.post('/quizzes', {
         title,
         description,
-        categoryId,
+        subjectId,
         questions: preparedQuestions,
       });
 
@@ -602,5 +611,45 @@ export const quizApi = {
       console.error('Error importing quiz from file:', error);
       throw error;
     }
+  },
+
+  getAllSubjects: async (): Promise<Subject[]> => {
+    try {
+      console.log('Fetching subjects...');
+      const response = await api.get('/subjects', {
+        headers: {
+          Authorization: undefined
+        }
+      });
+      console.log('Subjects response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+      throw error;
+    }
+  },
+
+  getSubjectsWithQuizCount: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/subjects/with-quiz-count');
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching subjects with quiz count:", error);
+      throw error;
+    }
+  },
+
+  createSubject: async (data: { name: string; icon: string }): Promise<Subject> => {
+    const response = await api.post('/subjects', data);
+    return response.data;
+  },
+
+  updateSubject: async (id: number, data: { name: string; icon: string }): Promise<Subject> => {
+    const response = await api.put(`/subjects/${id}`, data);
+    return response.data;
+  },
+
+  deleteSubject: async (id: number): Promise<void> => {
+    await api.delete(`/subjects/${id}`);
   },
 }; 

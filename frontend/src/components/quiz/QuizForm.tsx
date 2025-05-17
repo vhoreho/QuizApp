@@ -25,7 +25,7 @@ import api from "@/api/axiosConfig";
 const formSchema = z.object({
   title: z.string().min(1, "Название теста обязательно"),
   description: z.string().min(1, "Описание теста обязательно"),
-  categoryId: z.string().min(1, "Выберите категорию"),
+  subjectId: z.string().min(1, "Выберите предмет"),
 });
 
 interface QuizFormProps {
@@ -34,11 +34,11 @@ interface QuizFormProps {
 }
 
 export function QuizForm({ onSubmit, isLoading }: QuizFormProps) {
-  // Получаем список категорий
-  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
-    queryKey: ["categories"],
+  // Получаем список предметов
+  const { data: subjects = [], isLoading: isSubjectsLoading } = useQuery({
+    queryKey: ["subjects"],
     queryFn: async () => {
-      const response = await api.get("/categories");
+      const response = await api.get("/subjects");
       return response.data;
     },
   });
@@ -48,14 +48,14 @@ export function QuizForm({ onSubmit, isLoading }: QuizFormProps) {
     defaultValues: {
       title: "",
       description: "",
-      categoryId: "",
+      subjectId: "",
     },
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     onSubmit({
       ...values,
-      categoryId: parseInt(values.categoryId),
+      subjectId: parseInt(values.subjectId),
     });
   };
 
@@ -96,27 +96,24 @@ export function QuizForm({ onSubmit, isLoading }: QuizFormProps) {
 
         <FormField
           control={form.control}
-          name="categoryId"
+          name="subjectId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Категория</FormLabel>
+              <FormLabel>Предмет</FormLabel>
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                disabled={isCategoriesLoading}
+                disabled={isSubjectsLoading}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите категорию" />
+                    <SelectValue placeholder="Выберите предмет" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {categories.map((category: any) => (
-                    <SelectItem
-                      key={category.id}
-                      value={category.id.toString()}
-                    >
-                      {category.name}
+                  {subjects.map((subject: any) => (
+                    <SelectItem key={subject.id} value={subject.id.toString()}>
+                      {subject.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

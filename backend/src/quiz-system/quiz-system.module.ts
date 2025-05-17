@@ -3,7 +3,7 @@ import { UsersModule } from '../users/users.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { QuestionsModule } from './questions/questions.module';
 import { ResultsModule } from './results/results.module';
-import { CategoriesModule } from './categories/categories.module';
+import { SubjectsModule } from './subjects/subjects.module';
 
 @Module({
   imports: [
@@ -11,13 +11,13 @@ import { CategoriesModule } from './categories/categories.module';
     QuizzesModule,
     QuestionsModule,
     ResultsModule,
-    CategoriesModule,
+    SubjectsModule,
   ],
   exports: [
     QuizzesModule,
     QuestionsModule,
     ResultsModule,
-    CategoriesModule,
+    SubjectsModule,
   ],
 })
 export class QuizSystemModule { }

@@ -9,15 +9,12 @@ import {
 import { Quiz } from '../../quizzes/entities/quiz.entity';
 
 @Entity()
-export class Category {
+export class Subject {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ unique: true })
   name: string;
-
-  @Column()
-  description: string;
 
   @Column({ nullable: true })
   icon: string;
@@ -28,6 +25,6 @@ export class Category {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Quiz, (quiz) => quiz.category)
+  @OneToMany(() => Quiz, (quiz) => quiz.subject)
   quizzes: Quiz[];
 } 

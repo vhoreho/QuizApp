@@ -14,6 +14,7 @@ import {
 import { Badge } from "../../components/ui/badge";
 import { toast } from "../../components/ui/use-toast";
 import api from "../../api/axiosConfig";
+import { useLogout } from "@/hooks/queries/useAuth";
 
 // Типы данных
 interface CategoryStats {
@@ -48,6 +49,7 @@ export default function StudentProgress() {
     recentResults: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const logoutMutation = useLogout();
 
   useEffect(() => {
     const userJson = localStorage.getItem("user");
@@ -90,11 +92,8 @@ export default function StudentProgress() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setCurrentUser(null);
-    navigate("/login");
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
   };
 
   const formatDate = (dateString: string) => {

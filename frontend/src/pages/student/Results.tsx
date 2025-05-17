@@ -30,6 +30,7 @@ import {
 import { Badge } from "../../components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import { useStudentResults } from "@/hooks/queries/useQuizzes";
+import { useLogout } from "@/hooks/queries/useAuth";
 
 interface DisplayResult {
   id: number;
@@ -50,6 +51,7 @@ export default function StudentResults() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { data: apiResults, isLoading, error: apiError } = useStudentResults();
   const [displayResults, setDisplayResults] = useState<DisplayResult[]>([]);
+  const logoutMutation = useLogout();
 
   useEffect(() => {
     const userJson = localStorage.getItem("user");
@@ -85,11 +87,8 @@ export default function StudentResults() {
     }
   }, [apiResults]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setCurrentUser(null);
-    navigate("/login");
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
   };
 
   const formatDate = (dateString: string) => {

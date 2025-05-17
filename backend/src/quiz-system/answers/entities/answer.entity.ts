@@ -8,17 +8,17 @@ export class Answer {
   id: number;
 
   @ManyToOne(() => Question, (question) => question.answers, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'question_id' })
+  @JoinColumn({ name: 'questionId' })
   question: Question;
 
-  @Column({ name: 'question_id' })
+  @Column({ name: 'questionId' })
   questionId: number;
 
   @ManyToOne(() => User, (user) => user.answers, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'userId' })
   userId: number;
 
   @Column({ nullable: true })

@@ -1,12 +1,12 @@
-import { Quiz, QuizCategory } from "@/lib/types";
+import { Quiz, QuizSubject } from "@/lib/types";
 import axiosInstance from "./axiosConfig";
 
-interface CreateQuizDto {
+export interface CreateQuizDto {
   title: string;
   description: string;
-  category: QuizCategory;
+  subjectId: number;
   timeLimit?: number;
-  passingScore?: number;
+  isPublished?: boolean;
 }
 
 export const teacherApi = {

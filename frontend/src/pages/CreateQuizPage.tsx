@@ -4,32 +4,19 @@ import { QuizForm } from "@/components/quiz/QuizForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { teacherApi } from "../api/teacher";
-import { QuizCategory } from "@/lib/types";
 import * as z from "zod";
-
-const quizFormSchema = z.object({
-  title: z.string().min(1, "Название теста обязательно"),
-  description: z.string().min(1, "Описание теста обязательно"),
-  category: z.nativeEnum(QuizCategory, {
-    required_error: "Выберите категорию теста",
-  }),
-  timeLimit: z.string().optional(),
-  passingScore: z.string().optional(),
-});
-
-type QuizFormValues = z.infer<typeof quizFormSchema>;
 
 export default function CreateQuizPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (values: QuizFormValues) => {
+  const handleSubmit = async (values: any) => {
     try {
       setIsLoading(true);
       const quizData = {
         title: values.title,
         description: values.description,
-        category: values.category,
+        subjectId: values.subjectId,
         timeLimit: values.timeLimit ? parseInt(values.timeLimit) : undefined,
         passingScore: values.passingScore
           ? parseInt(values.passingScore)

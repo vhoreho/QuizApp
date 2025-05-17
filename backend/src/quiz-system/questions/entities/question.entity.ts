@@ -19,10 +19,10 @@ export class Question {
   id: number;
 
   @ManyToOne(() => Quiz, (quiz) => quiz.questions, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'quiz_id' })
+  @JoinColumn({ name: 'quizId' })
   quiz: Quiz;
 
-  @Column({ name: 'quiz_id' })
+  @Column({ name: 'quizId' })
   quizId: number;
 
   @Column()

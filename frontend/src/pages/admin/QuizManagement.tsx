@@ -222,12 +222,12 @@ export default function AdminQuizManagement() {
               </Button>
 
               <Button
-                onClick={() => navigate("/admin/categories")}
+                onClick={() => navigate("/admin/subjects")}
                 variant="outline"
                 className="border-blue-200 dark:border-blue-700 group"
               >
                 <MixerHorizontalIcon className="mr-2 h-4 w-4 group-hover:animate-bounce" />
-                Управление категориями
+                Управление предметами
               </Button>
             </div>
           </div>

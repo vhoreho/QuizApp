@@ -24,7 +24,7 @@ export class CreateQuizDto {
 
   @IsNumber()
   @IsNotEmpty()
-  categoryId: number;
+  subjectId: number;
 
   @IsNumber()
   @Min(1)

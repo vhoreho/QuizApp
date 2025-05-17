@@ -5,14 +5,17 @@ import { QuizzesService } from './quizzes.service';
 import { Quiz } from './entities/quiz.entity';
 import { UsersModule } from '../../users/users.module';
 import { ResultsModule } from '../results/results.module';
-import { CategoriesModule } from '../categories/categories.module';
+import { SubjectsModule } from '../subjects/subjects.module';
+import { Result } from '../results/entities/result.entity';
+import { QuestionsModule } from '../questions/questions.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Quiz]),
+    TypeOrmModule.forFeature([Quiz, Result]),
     UsersModule,
     ResultsModule,
-    CategoriesModule
+    SubjectsModule,
+    QuestionsModule
   ],
   controllers: [QuizzesController],
   providers: [QuizzesService],

@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserRole } from "../../lib/types";
+import { UserRole, QuizSubject, Quiz } from "../../lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
-import { ArrowLeftIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import {
+  ArrowLeftIcon,
+  MagnifyingGlassIcon,
+  ResetIcon,
+} from "@radix-ui/react-icons";
 import { Input } from "../../components/ui/input";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { useRequireRole, useLogout } from "@/hooks/queries/useAuth";
@@ -11,6 +15,9 @@ import {
   useAvailableQuizzes,
   useStudentResults,
 } from "@/hooks/queries/useQuizzes";
+import { QuizSubjects } from "@/components/quiz/QuizSubjects";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export default function StudentQuizzes() {
   const navigate = useNavigate();
@@ -46,25 +53,32 @@ export default function StudentQuizzes() {
 
   const [filteredQuizzes, setFilteredQuizzes] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState<
+    QuizSubject | undefined
+  >(undefined);
+  const [viewMode, setViewMode] = useState<"all" | "subjects">("all");
 
   useEffect(() => {
     if (quizzes) {
-      if (searchTerm.trim() === "") {
-        setFilteredQuizzes(quizzes);
-      } else {
-        const filtered = quizzes.filter(
+      let filtered = [...quizzes];
+
+      // Apply search filter
+      if (searchTerm.trim() !== "") {
+        filtered = filtered.filter(
           (quiz) =>
             quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            ((quiz as any).category &&
-              (quiz as any).category
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase()))
+            quiz.description.toLowerCase().includes(searchTerm.toLowerCase())
         );
-        setFilteredQuizzes(filtered);
       }
+
+      // Apply subject filter
+      if (selectedSubject) {
+        filtered = filtered.filter((quiz) => quiz.subject === selectedSubject);
+      }
+
+      setFilteredQuizzes(filtered);
     }
-  }, [searchTerm, quizzes]);
+  }, [searchTerm, quizzes, selectedSubject]);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -74,6 +88,20 @@ export default function StudentQuizzes() {
   const hasUserTakenQuiz = (quizId: number) => {
     if (!results) return false;
     return results.some((result) => result.quizId === quizId);
+  };
+
+  const handleSubjectSelect = (subject: QuizSubject) => {
+    if (selectedSubject === subject) {
+      // If clicking the same subject, clear the filter
+      setSelectedSubject(undefined);
+    } else {
+      setSelectedSubject(subject);
+    }
+  };
+
+  const clearFilters = () => {
+    setSelectedSubject(undefined);
+    setSearchTerm("");
   };
 
   const isLoading = isUserLoading || isQuizzesLoading || isResultsLoading;
@@ -95,6 +123,19 @@ export default function StudentQuizzes() {
       ? filteredQuizzes
       : quizzes || [];
   const hasQuizzes = displayQuizzes.length > 0;
+
+  // Group quizzes by subject
+  const quizzesBySubject: Record<string, Quiz[]> = displayQuizzes.reduce(
+    (acc: Record<string, Quiz[]>, quiz: Quiz) => {
+      const subject = String(quiz.subject);
+      if (!acc[subject]) {
+        acc[subject] = [];
+      }
+      acc[subject].push(quiz);
+      return acc;
+    },
+    {}
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -119,57 +160,147 @@ export default function StudentQuizzes() {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="relative w-full max-w-sm">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Поиск по названию или категории"
+                placeholder="Поиск по названию"
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+            {(selectedSubject || searchTerm) && (
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="flex items-center gap-2"
+              >
+                <ResetIcon className="h-4 w-4" />
+                Сбросить фильтры
+              </Button>
+            )}
           </div>
 
-          {hasQuizzes ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayQuizzes.map((quiz) => (
-                <QuizCard
-                  key={quiz.id}
-                  quiz={quiz}
-                  variant="student"
-                  userRole={UserRole.STUDENT}
-                  onTakeQuiz={(id) => navigate(`/quiz/${id}`)}
-                  hasTaken={hasUserTakenQuiz(quiz.id)}
+          <Tabs
+            defaultValue="all"
+            className="mb-8"
+            onValueChange={(value) => setViewMode(value as "all" | "subjects")}
+          >
+            <TabsList>
+              <TabsTrigger value="all">Все тесты</TabsTrigger>
+              <TabsTrigger value="subjects">По предметам</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="subjects" className="mt-6">
+              <div className="mb-8">
+                <h2 className="text-lg font-medium mb-4">Выберите предмет</h2>
+                <QuizSubjects
+                  selectedSubject={selectedSubject}
+                  onSubjectSelect={(subject) =>
+                    handleSubjectSelect(subject as QuizSubject)
+                  }
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="mb-4 text-muted-foreground">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-12 w-12 mx-auto"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
               </div>
-              <h3 className="text-xl font-medium mb-2">Тесты не найдены</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                На данный момент нет доступных тестов для прохождения.
-                Попробуйте проверить позже.
-              </p>
-            </div>
-          )}
+
+              {hasQuizzes ? (
+                <div className="space-y-10">
+                  {Object.entries(quizzesBySubject).map(
+                    ([subject, subjectQuizzes]) => (
+                      <div key={subject} className="border-t pt-4">
+                        <h3 className="text-xl font-bold mb-4 flex items-center">
+                          <span className="mr-2">{subject}</span>
+                          <Badge variant="outline">
+                            {subjectQuizzes.length}
+                          </Badge>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {subjectQuizzes.map((quiz) => (
+                            <QuizCard
+                              key={quiz.id}
+                              quiz={quiz}
+                              variant="student"
+                              userRole={UserRole.STUDENT}
+                              onTakeQuiz={(id) => navigate(`/quiz/${id}`)}
+                              hasTaken={hasUserTakenQuiz(quiz.id)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mb-4 text-muted-foreground">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-12 w-12 mx-auto"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">Тесты не найдены</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    {selectedSubject
+                      ? "Нет доступных тестов по выбранному предмету. Попробуйте выбрать другой предмет."
+                      : "На данный момент нет доступных тестов для прохождения. Попробуйте выбрать позже."}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="all" className="mt-6">
+              {hasQuizzes ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {displayQuizzes.map((quiz) => (
+                    <QuizCard
+                      key={quiz.id}
+                      quiz={quiz}
+                      variant="student"
+                      userRole={UserRole.STUDENT}
+                      onTakeQuiz={(id) => navigate(`/quiz/${id}`)}
+                      hasTaken={hasUserTakenQuiz(quiz.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mb-4 text-muted-foreground">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-12 w-12 mx-auto"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">Тесты не найдены</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    На данный момент нет доступных тестов для прохождения.
+                    Попробуйте проверить позже.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

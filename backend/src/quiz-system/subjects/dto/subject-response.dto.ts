@@ -1,7 +1,7 @@
 import { Exclude, Expose } from 'class-transformer';
 
 @Exclude()
-export class CategoryResponseDto {
+export class SubjectResponseDto {
   @Expose()
   id: number;
 
@@ -9,14 +9,8 @@ export class CategoryResponseDto {
   name: string;
 
   @Expose()
-  description: string;
-
-  @Expose()
   icon: string;
 
   @Expose()
-  createdAt: Date;
-
-  @Expose()
-  updatedAt: Date;
+  quizCount?: number;
 } 

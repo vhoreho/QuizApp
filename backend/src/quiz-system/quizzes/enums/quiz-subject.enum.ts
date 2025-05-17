@@ -1,4 +1,4 @@
-export enum QuizCategory {
+export enum QuizSubject {
   PROGRAMMING = "programming",
   MATHEMATICS = "mathematics",
   SCIENCE = "science",

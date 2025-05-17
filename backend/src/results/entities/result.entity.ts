@@ -15,17 +15,17 @@ export class Result {
   id: number;
 
   @ManyToOne(() => User, (user) => user.results, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'userId' })
   userId: number;
 
   @ManyToOne(() => Quiz, (quiz) => quiz.results, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'quiz_id' })
+  @JoinColumn({ name: 'quizId' })
   quiz: Quiz;
 
-  @Column({ name: 'quiz_id' })
+  @Column({ name: 'quizId' })
   quizId: number;
 
   @Column('float')

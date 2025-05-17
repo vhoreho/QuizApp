@@ -31,7 +31,7 @@ export interface Question {
   order: number;
 }
 
-export enum QuizCategory {
+export enum QuizSubject {
   PROGRAMMING = "programming",
   MATHEMATICS = "mathematics",
   SCIENCE = "science",
@@ -41,63 +41,63 @@ export enum QuizCategory {
   OTHER = "other"
 }
 
-export interface QuizCategoryInfo {
-  id: QuizCategory;
+export interface QuizSubjectInfo {
+  id: QuizSubject;
   name: string;
-  description: string;
   icon: string;
 }
 
-export const QUIZ_CATEGORIES: QuizCategoryInfo[] = [
+export const QUIZ_SUBJECTS: QuizSubjectInfo[] = [
   {
-    id: QuizCategory.PROGRAMMING,
+    id: QuizSubject.PROGRAMMING,
     name: "Программирование",
-    description: "Тесты по различным языкам программирования и технологиям",
     icon: "💻"
   },
   {
-    id: QuizCategory.MATHEMATICS,
+    id: QuizSubject.MATHEMATICS,
     name: "Математика",
-    description: "Тесты по алгебре, геометрии и другим разделам математики",
     icon: "📐"
   },
   {
-    id: QuizCategory.SCIENCE,
+    id: QuizSubject.SCIENCE,
     name: "Естественные науки",
-    description: "Тесты по физике, химии, биологии и другим наукам",
     icon: "🔬"
   },
   {
-    id: QuizCategory.LANGUAGES,
+    id: QuizSubject.LANGUAGES,
     name: "Языки",
-    description: "Тесты по иностранным языкам и лингвистике",
     icon: "🌍"
   },
   {
-    id: QuizCategory.HISTORY,
+    id: QuizSubject.HISTORY,
     name: "История",
-    description: "Тесты по всемирной истории и историческим событиям",
     icon: "📜"
   },
   {
-    id: QuizCategory.LITERATURE,
+    id: QuizSubject.LITERATURE,
     name: "Литература",
-    description: "Тесты по литературе, писателям и произведениям",
     icon: "📚"
   },
   {
-    id: QuizCategory.OTHER,
+    id: QuizSubject.OTHER,
     name: "Другое",
-    description: "Различные тесты, не вошедшие в другие категории",
     icon: "📌"
   }
 ];
+
+export interface Subject {
+  id: number;
+  name: string;
+  icon: string;
+  quizCount?: number;
+}
 
 export interface Quiz {
   id: number;
   title: string;
   description: string;
-  category: QuizCategory;
+  subject: string;
+  subjectId: number;
   timeLimit?: number;
   passingScore?: number;
   isPublished: boolean;

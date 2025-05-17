@@ -19,7 +19,7 @@ export const useAdminDashboardStats = (
   return useQuery({
     queryKey: STATS_KEYS.dashboard(excludeCurrentUser, publishedOnly),
     queryFn: () => adminApi.getDashboardStats(excludeCurrentUser, publishedOnly),
-    staleTime: 5 * 60 * 1000, // 5 минут
+    staleTime: 3600, // 5 минут
   });
 };
 

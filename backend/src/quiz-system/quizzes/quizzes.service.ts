@@ -15,7 +15,7 @@ import { QuestionsService } from '../questions/questions.service';
 import { Result } from '../results/entities/result.entity';
 import { UpdateQuizStatusDto } from './dto/update-quiz-status.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
-import { CategoriesService } from '../categories/categories.service';
+import { SubjectsService } from '../subjects/subjects.service';
 import { HomepageResponseDto } from './dto/homepage-response.dto';
 import { QuizResponseDto } from './dto/quiz-response.dto';
 import { ResultResponseDto } from '../results/dto/result-response.dto';
@@ -32,7 +32,7 @@ export class QuizzesService {
     private resultsRepository: Repository<Result>,
     private usersService: UsersService,
     private questionsService: QuestionsService,
-    private categoriesService: CategoriesService,
+    private subjectsService: SubjectsService,
   ) { }
 
   async create(createQuizDto: CreateQuizDto, userId: number): Promise<Quiz> {
@@ -42,12 +42,12 @@ export class QuizzesService {
       // Проверяем существование пользователя
       await this.usersService.findOne(userId);
 
-      // Проверяем существование категории
+      // Проверяем существование предмета
       try {
-        await this.categoriesService.findOne(createQuizDto.categoryId);
+        await this.subjectsService.findOne(createQuizDto.subjectId);
       } catch (error) {
-        this.logger.error(`Error checking category: ${error.message}`, error.stack);
-        throw new BadRequestException(`Категория с ID ${createQuizDto.categoryId} не найдена`);
+        this.logger.error(`Error checking subject: ${error.message}`, error.stack);
+        throw new BadRequestException(`Предмет с ID ${createQuizDto.subjectId} не найден`);
       }
 
       // Extract questions from the DTO
@@ -62,7 +62,7 @@ export class QuizzesService {
       // Create and save the quiz
       const quiz = this.quizzesRepository.create({
         ...quizData,
-        categoryId: quizData.categoryId,
+        subjectId: quizData.subjectId,
         createdById: userId,
       });
 
@@ -317,9 +317,9 @@ export class QuizzesService {
   }
 
   async getHomepageData(userId: number, userRole: UserRole): Promise<HomepageResponseDto> {
-    const [quizzes, categories] = await Promise.all([
+    const [quizzes, subjects] = await Promise.all([
       this.getQuizzesForRole(userId, userRole),
-      this.categoriesService.findAll()
+      this.subjectsService.findAll()
     ]);
 
     const stats = await this.getStatsForRole(userId, userRole);
@@ -327,7 +327,7 @@ export class QuizzesService {
     return new HomepageResponseDto({
       userRole,
       quizzes,
-      categories,
+      subjects,
       stats
     });
   }
@@ -354,14 +354,14 @@ export class QuizzesService {
 
     switch (userRole) {
       case UserRole.ADMIN:
-        const [totalQuizzes, totalUsers, totalCategories] = await Promise.all([
+        const [totalQuizzes, totalUsers, totalSubjects] = await Promise.all([
           this.quizzesRepository.count(),
           this.usersService.count(),
-          this.categoriesService.count()
+          this.subjectsService.count()
         ]);
         stats.totalQuizzes = totalQuizzes;
         stats.totalUsers = totalUsers;
-        stats.totalCategories = totalCategories;
+        stats.totalSubjects = totalSubjects;
         break;
 
       case UserRole.TEACHER:

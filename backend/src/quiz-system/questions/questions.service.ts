@@ -27,7 +27,7 @@ export class QuestionsService {
     private questionsRepository: Repository<Question>,
     @InjectRepository(Answer)
     private answersRepository: Repository<Answer>,
-  ) {}
+  ) { }
 
   async create(quizId: number, createQuestionDto: CreateQuestionDto): Promise<Question> {
     const questionData: any = {

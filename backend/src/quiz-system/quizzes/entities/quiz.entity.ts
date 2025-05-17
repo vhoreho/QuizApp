@@ -10,7 +10,7 @@ import {
 import { User } from '../../../users/entities/user.entity';
 import { Question } from '../../questions/entities/question.entity';
 import { Result } from '../../results/entities/result.entity';
-import { Category } from '../../categories/entities/category.entity';
+import { Subject } from '../../subjects/entities/subject.entity';
 
 @Entity()
 export class Quiz {
@@ -23,12 +23,12 @@ export class Quiz {
   @Column()
   description: string;
 
-  @ManyToOne(() => Category, (category) => category.quizzes)
-  @JoinColumn({ name: 'category_id' })
-  category: Category;
+  @ManyToOne(() => Subject, (subject) => subject.quizzes)
+  @JoinColumn({ name: 'subjectId' })
+  subject: Subject;
 
-  @Column({ name: 'category_id' })
-  categoryId: number;
+  @Column({ name: 'subjectId' })
+  subjectId: number;
 
   @Column({ nullable: true })
   timeLimit?: number;
@@ -37,10 +37,10 @@ export class Quiz {
   passingScore?: number;
 
   @ManyToOne(() => User, (user) => user.quizzes)
-  @JoinColumn({ name: 'created_by_id' })
+  @JoinColumn({ name: 'createdById' })
   createdBy: User;
 
-  @Column({ name: 'created_by_id' })
+  @Column({ name: 'createdById' })
   createdById: number;
 
   @Column({ default: false })
