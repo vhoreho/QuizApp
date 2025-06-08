@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, UserRole, Quiz } from "../../lib/types";
+import { UserRole, User, Quiz } from "@/lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
@@ -23,6 +23,7 @@ import { Badge } from "../../components/ui/badge";
 import { authApi } from "../../api/auth";
 import { teacherApi } from "../../api/quizApi";
 import { toast } from "../../components/ui/use-toast";
+import { isValidUser } from "@/lib/utils";
 
 interface QuizAnalytics {
   id: number;
@@ -206,7 +207,10 @@ export default function TeacherAnalytics() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser!} onLogout={handleLogout} />
+      <Header
+        user={isValidUser(currentUser) ? currentUser : null}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

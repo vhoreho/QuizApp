@@ -1,11 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
-import { LoggerService } from './logger.service';
+import { Controller, Get, Logger } from '@nestjs/common';
 
 @Controller()
 export class AppController {
-  constructor(private readonly logger: LoggerService) {
-    this.logger.setContext(AppController.name);
-  }
+  private readonly logger = new Logger(AppController.name);
 
   @Get()
   healthCheck() {
@@ -23,7 +20,7 @@ export class AppController {
 
     return {
       message: 'Test logs have been generated',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
-} 
+}

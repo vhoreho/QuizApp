@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
 import CreateQuizPage from "@/pages/CreateQuizPage";
+import EditQuizPage from "@/pages/EditQuizPage";
 import TakeQuizPage from "@/pages/TakeQuizPage";
 import ResultsPage from "@/pages/ResultsPage";
 import Login from "@/pages/Login";
@@ -14,6 +15,8 @@ import NotAuthorized from "@/pages/NotAuthorized";
 import NotFound from "@/pages/NotFound";
 import QuizManagement from "@/pages/admin/QuizManagement";
 import Analytics from "@/pages/admin/Analytics";
+import AdminQuizResultsPage from "@/pages/admin/QuizResultsPage";
+import AdminResultsPage from "@/pages/admin/ResultsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useEffect } from "react";
 import { authApi } from "./api/auth";
@@ -26,21 +29,20 @@ import TeacherQuestions from "@/pages/teacher/Questions";
 import StudentQuizzes from "@/pages/student/Quizzes";
 import StudentResults from "@/pages/student/Results";
 import ProfilePage from "@/pages/ProfilePage";
-import StudentProgress from "@/pages/student/Progress";
+import StudentProgress from "./pages/student/Progress";
+import ImportQuizPage from "./pages/ImportQuizPage";
+import SubjectManagementPage from "./pages/admin/SubjectManagement";
 
 function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Инициализируем перехватчик запросов для авторизации
-    authApi.setupAuthInterceptor();
-
-    // Добавляем обработку ошибок авторизации
+    // Add response interceptor for handling 401 errors
     api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response && error.response.status === 401) {
-          // Если получили ошибку авторизации, перенаправляем на страницу логина
+          // If we get an auth error, redirect to login
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           navigate("/login");
@@ -93,10 +95,34 @@ function App() {
           }
         />
         <Route
+          path="/admin/quizzes/:quizId/results"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <AdminQuizResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/results"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <AdminResultsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/analytics"
           element={
             <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
               <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/subjects"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <SubjectManagementPage />
             </ProtectedRoute>
           }
         />
@@ -139,6 +165,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={[UserRole.TEACHER]}>
               <TeacherAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/quizzes/:quizId/results"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.TEACHER]}>
+              <AdminQuizResultsPage />
             </ProtectedRoute>
           }
         />
@@ -195,7 +229,36 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="quiz/:quizId" element={<TakeQuizPage />} />
+          <Route
+            path="edit-quiz/:id"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.TEACHER, UserRole.ADMIN]}>
+                <EditQuizPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="import-quiz"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.TEACHER, UserRole.ADMIN]}>
+                <ImportQuizPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="quiz/:id"
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  UserRole.STUDENT,
+                  UserRole.TEACHER,
+                  UserRole.ADMIN,
+                ]}
+              >
+                <TakeQuizPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="results/:quizId" element={<ResultsPage />} />
         </Route>
 

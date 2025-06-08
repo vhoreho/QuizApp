@@ -3,12 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { User, UserRole } from "../../lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
-import {
-  ArrowLeftIcon,
-  PlusIcon,
-  DotsHorizontalIcon,
-  MagnifyingGlassIcon,
-} from "@radix-ui/react-icons";
+import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import {
   Card,
   CardContent,
@@ -17,42 +12,11 @@ import {
   CardTitle,
   CardFooter,
 } from "../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
-import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { useToast } from "../../components/ui/use-toast";
 import api from "../../api/axiosConfig";
 import { authApi } from "../../api/auth";
+import { isValidUser } from "@/lib/utils";
 
 interface Question {
   id: number;
@@ -63,18 +27,6 @@ interface Question {
   usageCount: number;
   createdAt: string;
 }
-
-const questionTypes = {
-  single: "Один вариант",
-  multiple: "Несколько вариантов",
-  text: "Текстовый ответ",
-};
-
-const difficultyLabels = {
-  easy: "Легкий",
-  medium: "Средний",
-  hard: "Сложный",
-};
 
 export default function TeacherQuestions() {
   const navigate = useNavigate();
@@ -124,79 +76,41 @@ export default function TeacherQuestions() {
   const fetchQuestions = async () => {
     setIsLoading(true);
     try {
-      // In a real application, this would fetch from your API
-      // const response = await api.get("/teacher/questions");
-      // setQuestions(response.data);
+      // Make actual API call to fetch questions
+      const response = await api.get("/teacher/questions");
 
-      // Mock data for demonstration
-      const mockQuestions = [
-        {
-          id: 1,
-          text: "Какой метод массива используется для добавления элемента в конец массива?",
-          type: "single" as const,
-          difficulty: "easy" as const,
-          category: "JavaScript",
-          usageCount: 12,
-          createdAt: "2023-04-15T10:30:00Z",
-        },
-        {
-          id: 2,
-          text: "Выберите правильные селекторы CSS:",
-          type: "multiple" as const,
-          difficulty: "medium" as const,
-          category: "HTML/CSS",
-          usageCount: 8,
-          createdAt: "2023-04-20T14:15:00Z",
-        },
-        {
-          id: 3,
-          text: "Объясните, что такое замыкания в JavaScript и приведите пример.",
-          type: "text" as const,
-          difficulty: "hard" as const,
-          category: "JavaScript",
-          usageCount: 5,
-          createdAt: "2023-04-25T09:45:00Z",
-        },
-        {
-          id: 4,
-          text: "Какой тип данных не существует в JavaScript?",
-          type: "single" as const,
-          difficulty: "easy" as const,
-          category: "JavaScript",
-          usageCount: 10,
-          createdAt: "2023-05-03T11:20:00Z",
-        },
-        {
-          id: 5,
-          text: "Выберите правильные утверждения о React компонентах:",
-          type: "multiple" as const,
-          difficulty: "medium" as const,
-          category: "React",
-          usageCount: 7,
-          createdAt: "2023-05-10T16:30:00Z",
-        },
-        {
-          id: 6,
-          text: "Какие методы сортировки имеют сложность O(n log n)?",
-          type: "multiple" as const,
-          difficulty: "hard" as const,
-          category: "Алгоритмы",
-          usageCount: 4,
-          createdAt: "2023-05-15T13:45:00Z",
-        },
-      ];
+      if (response.data && Array.isArray(response.data)) {
+        setQuestions(response.data);
 
-      setQuestions(mockQuestions);
+        // Extract unique categories
+        const uniqueCategories = Array.from(
+          new Set(response.data.map((q) => q.category))
+        );
+        setCategories(uniqueCategories);
 
-      // Extract unique categories
-      const uniqueCategories = Array.from(
-        new Set(mockQuestions.map((q) => q.category))
-      );
-      setCategories(uniqueCategories);
-
-      setFilteredQuestions(mockQuestions);
+        setFilteredQuestions(response.data);
+      } else {
+        // Handle empty or invalid response
+        setQuestions([]);
+        setCategories([]);
+        setFilteredQuestions([]);
+        toast({
+          variant: "destructive",
+          title: "Ошибка",
+          description: "Не удалось загрузить вопросы. Неверный формат данных.",
+        });
+      }
     } catch (err) {
       console.error("Error fetching questions:", err);
+      setQuestions([]);
+      setCategories([]);
+      setFilteredQuestions([]);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description:
+          "Не удалось загрузить вопросы. Пожалуйста, попробуйте позже.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -274,17 +188,26 @@ export default function TeacherQuestions() {
     }
   };
 
-  const handleDeleteQuestion = (questionId: number) => {
-    // In a real application, you would make an API call to delete the question
-    // await api.delete(`/teacher/questions/${questionId}`);
+  const handleDeleteQuestion = async (questionId: number) => {
+    try {
+      // Make actual API call to delete the question
+      await api.delete(`/teacher/questions/${questionId}`);
 
-    // Simulate deleting a question
-    setQuestions(questions.filter((question) => question.id !== questionId));
+      // Update local state after successful deletion
+      setQuestions(questions.filter((question) => question.id !== questionId));
 
-    toast({
-      title: "Вопрос удален",
-      description: "Вопрос успешно удален из банка вопросов",
-    });
+      toast({
+        title: "Вопрос удален",
+        description: "Вопрос успешно удален из банка вопросов",
+      });
+    } catch (err) {
+      console.error("Error deleting question:", err);
+      toast({
+        variant: "destructive",
+        title: "Ошибка",
+        description: "Не удалось удалить вопрос. Пожалуйста, попробуйте позже.",
+      });
+    }
   };
 
   if (isLoading) {
@@ -300,7 +223,10 @@ export default function TeacherQuestions() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser!} onLogout={handleLogout} />
+      <Header
+        user={isValidUser(currentUser) ? currentUser : null}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">

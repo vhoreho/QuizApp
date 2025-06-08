@@ -1,20 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { authApi } from "../api/auth";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UserRole } from "../lib/types";
+import { useForm } from "react-hook-form";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardDescription,
   CardFooter,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import {
   Form,
   FormControl,
@@ -22,11 +20,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "../components/ui/form";
 import { ReaderIcon, EnterIcon } from "@radix-ui/react-icons";
 import { ThemeToggle } from "../components/theme-toggle";
+import { PAGE_TITLES, ROUTES, MESSAGES } from "@/lib/constants";
+import { toast } from "@/components/ui/use-toast";
+import { useLogin } from "@/hooks/queries/useAuth";
+import { useUser } from "@/contexts/UserContext";
 
+// Определение схемы и типа для формы входа
 const loginSchema = z.object({
   username: z.string().min(1, "Имя пользователя обязательно"),
   password: z.string().min(1, "Пароль обязателен"),
@@ -38,8 +40,26 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const from = location.state?.from?.pathname || "/";
+  const from = location.state?.from?.pathname || ROUTES.HOME;
+  const { user } = useUser();
+
+  // Используем хук для авторизации
+  const loginMutation = useLogin();
+  const isLoading = loginMutation.isPending;
+
+  // Проверяем наличие пользователя при загрузке страницы
+  useEffect(() => {
+    if (user) {
+      const redirectPath = getRedirectPathForRole(user.role);
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Функция для определения пути редиректа в зависимости от роли
+  const getRedirectPathForRole = (role: string) => {
+    // Всегда перенаправляем на главную страницу после входа
+    return ROUTES.HOME;
+  };
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -49,63 +69,31 @@ export default function Login() {
     },
   });
 
-  useEffect(() => {
-    // Initialize the auth interceptor is now handled in App.tsx
-    // authApi.setupAuthInterceptor();
-
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      try {
-        // If user explicitly navigated to login page, don't auto-redirect
-        if (location.pathname === "/login" && !location.state?.from) {
-          return;
-        }
-
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        // Try to get profile to verify token is valid
-        const user = await authApi.getProfile();
-
-        // Redirect based on role
-        if (user.role === UserRole.ADMIN) {
-          navigate("/admin/dashboard");
-        } else if (user.role === UserRole.TEACHER) {
-          navigate("/teacher/dashboard");
-        } else if (user.role === UserRole.STUDENT) {
-          navigate("/student/dashboard");
-        } else {
-          navigate(from);
-        }
-      } catch (error) {
-        // If the token is invalid or expired, it will be caught here
-        console.error("Authentication check failed:", error);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      }
-    };
-
-    checkAuth();
-  }, [navigate, from, location]);
-
   const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const response = await authApi.login(data);
+      setError(null);
+      const result = await loginMutation.mutateAsync({
+        username: data.username,
+        password: data.password,
+      });
 
-      // Redirect based on role
-      if (response.user.role === UserRole.ADMIN) {
-        navigate("/admin/dashboard");
-      } else if (response.user.role === UserRole.TEACHER) {
-        navigate("/teacher/dashboard");
+      // Проверяем, что в ответе есть токен доступа
+      if (result && result.access_token) {
+        toast({
+          title: "Успех",
+          description: MESSAGES.SUCCESS.LOGIN_SUCCESS,
+        });
+
+        // Перенаправляем пользователя в соответствии с его ролью
+        const redirectPath = getRedirectPathForRole(result.user.role);
+        navigate(redirectPath, { replace: true });
       } else {
-        navigate("/student/dashboard");
+        // Если токена нет, значит что-то пошло не так
+        throw new Error("Ошибка входа: Отсутствует токен доступа");
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Ошибка входа в систему");
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error("Login error:", error);
+      setError(MESSAGES.ERRORS.LOGIN_FAILED);
     }
   };
 
@@ -115,7 +103,7 @@ export default function Login() {
         <ThemeToggle />
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-6">
+      <main className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center mb-8">
             <ReaderIcon className="h-10 w-10 text-primary mr-2" />
@@ -125,7 +113,7 @@ export default function Login() {
           <Card className="border border-border">
             <CardHeader>
               <CardTitle className="text-2xl text-center">
-                Вход в систему
+                {PAGE_TITLES.LOGIN}
               </CardTitle>
               <CardDescription className="text-center">
                 Введите свои учетные данные для входа
@@ -134,11 +122,10 @@ export default function Login() {
 
             <CardContent>
               {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md mb-4">
+                  {error}
+                </div>
               )}
-
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
@@ -181,7 +168,7 @@ export default function Login() {
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
-                      "Вход..."
+                      MESSAGES.COMMON.LOADING
                     ) : (
                       <>
                         <EnterIcon className="mr-2 h-4 w-4" />
@@ -200,7 +187,7 @@ export default function Login() {
             </CardFooter>
           </Card>
         </div>
-      </div>
+      </main>
 
       <footer className="border-t border-border bg-background">
         <div className="container mx-auto px-4 py-6">

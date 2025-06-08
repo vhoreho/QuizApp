@@ -3,17 +3,18 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from '../users/entities/user.entity';
+import { UserResponseDto } from '../users/dto/user-response.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
     const user = await this.usersService.findByUsername(username);
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       const { password, ...result } = user;
       return result;
     }
@@ -22,15 +23,13 @@ export class AuthService {
 
   async login(user: any) {
     const payload = { username: user.username, sub: user.id, role: user.role };
+
+    // Исключаем чувствительные данные с помощью DTO
+    const userResponse = UserResponseDto.fromEntity(user);
+
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: userResponse,
     };
   }
 
@@ -47,7 +46,8 @@ export class AuthService {
     // Hash the password
     userData.password = await this.hashPassword(userData.password);
 
-    // Create the user
-    return this.usersService.create(userData);
+    // Create the user and return safe user data
+    const user = await this.usersService.create(userData);
+    return user; // Уже безопасный объект благодаря использованию UserResponseDto в сервисе
   }
-} 
+}

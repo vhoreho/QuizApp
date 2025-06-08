@@ -45,11 +45,11 @@ import { Badge } from "../../components/ui/badge";
 import { useToast } from "../../components/ui/use-toast";
 import api from "../../api/axiosConfig";
 import { authApi } from "../../api/auth";
+import { isValidUser } from "@/lib/utils";
 
 interface Student {
   id: number;
   name: string;
-  email: string;
   quizzesTaken: number;
   averageScore: number;
 }
@@ -123,21 +123,18 @@ export default function TeacherGroups() {
             {
               id: 1,
               name: "Иванов Алексей",
-              email: "ivanov@example.com",
               quizzesTaken: 4,
               averageScore: 85,
             },
             {
               id: 2,
               name: "Смирнова Ольга",
-              email: "smirnova@example.com",
               quizzesTaken: 5,
               averageScore: 92,
             },
             {
               id: 3,
               name: "Петров Дмитрий",
-              email: "petrov@example.com",
               quizzesTaken: 3,
               averageScore: 78,
             },
@@ -153,14 +150,12 @@ export default function TeacherGroups() {
             {
               id: 4,
               name: "Козлова Анна",
-              email: "kozlova@example.com",
               quizzesTaken: 3,
               averageScore: 88,
             },
             {
               id: 5,
               name: "Соколов Игорь",
-              email: "sokolov@example.com",
               quizzesTaken: 2,
               averageScore: 75,
             },
@@ -176,7 +171,6 @@ export default function TeacherGroups() {
             {
               id: 6,
               name: "Новикова Елена",
-              email: "novikova@example.com",
               quizzesTaken: 2,
               averageScore: 90,
             },
@@ -266,7 +260,10 @@ export default function TeacherGroups() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser!} onLogout={handleLogout} />
+      <Header
+        user={isValidUser(currentUser) ? currentUser : null}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
