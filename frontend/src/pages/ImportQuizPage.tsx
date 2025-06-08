@@ -126,7 +126,7 @@ export default function ImportQuizPage() {
       file: data.file,
       title: "", // Будет взято из файла
       description: "", // Будет взято из файла
-      categoryId: data.categoryId,
+      subjectId: data.subjectId,
       onImportStart: () => {
         setIsLoading(true);
       },

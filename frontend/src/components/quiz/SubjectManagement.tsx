@@ -30,31 +30,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { PlusIcon, Pencil1Icon, TrashIcon } from "@radix-ui/react-icons";
 import { toast } from "@/components/ui/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 import { Subject } from "@/lib/types";
-import { SUBJECT_ICONS } from "@/lib/constants/subject-icons";
-import { getRadixSubjectIcon } from "@/lib/constants/radix-subject-icons.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { getAutoSubjectIcon } from "@/lib/constants/radix-subject-icons";
+
 import { quizApi } from "@/api/quizApi";
 
 // Схема валидации для формы предмета
 const subjectFormSchema = z.object({
   name: z.string().min(1, "Название предмета обязательно"),
-  icon: z.string().min(1, "Иконка обязательна"),
 });
 
 type SubjectFormValues = z.infer<typeof subjectFormSchema>;
@@ -62,17 +45,13 @@ type SubjectFormValues = z.infer<typeof subjectFormSchema>;
 export function SubjectManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-  const queryClient = useQueryClient();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [newSubjectName, setNewSubjectName] = useState("");
-  const [selectedIcon, setSelectedIcon] = useState("📚");
 
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectFormSchema),
     defaultValues: {
       name: "",
-      icon: "📚",
     },
   });
 
@@ -112,7 +91,6 @@ export function SubjectManagement() {
       if (editingSubject) {
         const updatedSubject = await quizApi.updateSubject(editingSubject.id, {
           name: data.name,
-          icon: data.icon,
         });
         setSubjects(
           subjects.map((subject) =>
@@ -124,7 +102,6 @@ export function SubjectManagement() {
       } else {
         const newSubject = await quizApi.createSubject({
           name: data.name,
-          icon: data.icon,
         });
         setSubjects([...subjects, newSubject]);
         setIsCreateDialogOpen(false);
@@ -142,10 +119,6 @@ export function SubjectManagement() {
     }
   };
 
-  if (isLoading) {
-    return <div>Загрузка...</div>;
-  }
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -162,7 +135,7 @@ export function SubjectManagement() {
               Создать предмет
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>
                 {editingSubject ? "Редактировать предмет" : "Создать предмет"}
@@ -183,52 +156,30 @@ export function SubjectManagement() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Название</FormLabel>
+                      <FormLabel>Название предмета</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Введите название предмета"
                           {...field}
+                          className="text-lg h-12"
                         />
                       </FormControl>
                       <FormMessage />
+                      {field.value && (
+                        <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded-md">
+                          <div className="flex items-center justify-center w-8 h-8 bg-background rounded border">
+                            {getAutoSubjectIcon(field.value)}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            Автоматически выбранная иконка
+                          </span>
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="icon"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Иконка предмета</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue>
-                              <span className="text-2xl">{field.value}</span>
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(SUBJECT_ICONS).map(
-                              ([key, icon]) => (
-                                <SelectItem key={key + icon} value={icon}>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-2xl">{icon}</span>
-                                    <span>{key}</span>
-                                  </div>
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
+
+                <DialogFooter className="gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -251,139 +202,125 @@ export function SubjectManagement() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div>Загрузка...</div>
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-t-2 border-primary border-solid rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Загрузка предметов...</p>
+          </div>
         ) : (
           <>
-            {subjects.length === 0 && (
-              <div className="text-center py-4">
-                <p className="text-muted-foreground">
-                  Нет предметов. Создайте первый.
+            {subjects.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 text-6xl text-muted-foreground/50">
+                  📚
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Нет предметов</h3>
+                <p className="text-muted-foreground mb-4">
+                  Создайте первый предмет для организации тестов
                 </p>
+                <Button
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  variant="outline"
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Создать предмет
+                </Button>
               </div>
-            )}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Иконка</TableHead>
-                  <TableHead>Название</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {subjects.map((subject) => (
-                  <TableRow key={subject.id}>
-                    <TableCell>
-                      <span className="flex items-center justify-center">
-                        {editingSubject?.id === subject.id
-                          ? getRadixSubjectIcon(subject.name)
-                          : getRadixSubjectIcon(subject.name)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
+                  <Card
+                    key={subject.id}
+                    className="hover:shadow-md transition-shadow duration-200 border-2 hover:border-primary/20"
+                  >
+                    <CardContent className="p-6">
                       {editingSubject?.id === subject.id ? (
                         <Form {...form}>
                           <form
                             onSubmit={form.handleSubmit(onSubmit)}
-                            className="flex gap-2"
+                            className="space-y-4"
                           >
                             <FormField
                               control={form.control}
                               name="name"
                               render={({ field }) => (
-                                <FormItem className="flex-1">
-                                  <FormControl>
-                                    <Input {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="icon"
-                              render={({ field }) => (
                                 <FormItem>
+                                  <FormLabel>Название</FormLabel>
                                   <FormControl>
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={field.onChange}
-                                    >
-                                      <SelectTrigger className="w-[100px]">
-                                        <SelectValue>
-                                          <span className="text-2xl">
-                                            {field.value}
-                                          </span>
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {Object.entries(SUBJECT_ICONS).map(
-                                          ([key, icon]) => (
-                                            <SelectItem
-                                              key={key + icon}
-                                              value={icon}
-                                            >
-                                              <div className="flex items-center gap-2">
-                                                <span className="text-2xl">
-                                                  {icon}
-                                                </span>
-                                                <span>{key}</span>
-                                              </div>
-                                            </SelectItem>
-                                          )
-                                        )}
-                                      </SelectContent>
-                                    </Select>
+                                    <Input
+                                      {...field}
+                                      placeholder="Название предмета"
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
                             />
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => setEditingSubject(null)}
+                                size="sm"
+                                onClick={() => {
+                                  setEditingSubject(null);
+                                  form.reset();
+                                }}
+                                className="flex-1"
                               >
                                 Отмена
                               </Button>
-                              <Button type="submit">Сохранить</Button>
+                              <Button
+                                type="submit"
+                                size="sm"
+                                className="flex-1"
+                              >
+                                Сохранить
+                              </Button>
                             </div>
                           </form>
                         </Form>
                       ) : (
-                        subject.name
+                        <>
+                          <div className="text-center mb-4">
+                            <div className="mb-2 flex justify-center">
+                              <div className="w-12 h-12 flex items-center justify-center bg-muted rounded-lg">
+                                {getAutoSubjectIcon(subject.name)}
+                              </div>
+                            </div>
+                            <h3 className="font-semibold text-lg">
+                              {subject.name}
+                            </h3>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingSubject(subject);
+                                form.reset({
+                                  name: subject.name,
+                                });
+                              }}
+                              className="flex-1"
+                            >
+                              <Pencil1Icon className="mr-2 h-3 w-3" />
+                              Изменить
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteSubject(subject.id)}
+                              className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                            >
+                              <TrashIcon className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </>
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {editingSubject?.id !== subject.id && (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditingSubject(subject);
-                              form.reset({
-                                name: subject.name,
-                                icon: subject.icon,
-                              });
-                            }}
-                          >
-                            <Pencil1Icon className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteSubject(subject.id)}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                    </CardContent>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            )}
           </>
         )}
       </CardContent>

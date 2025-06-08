@@ -5,19 +5,16 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-} from 'typeorm';
-import { Quiz } from '../../quizzes/entities/quiz.entity';
+} from "typeorm";
+import { Quiz } from "../../quizzes/entities/quiz.entity";
 
-@Entity()
+@Entity("subject")
 export class Subject {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ unique: true })
   name: string;
-
-  @Column({ nullable: true })
-  icon: string;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -27,4 +24,4 @@ export class Subject {
 
   @OneToMany(() => Quiz, (quiz) => quiz.subject)
   quizzes: Quiz[];
-} 
+}

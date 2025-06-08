@@ -2,25 +2,28 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
   Body,
   Param,
   UseGuards,
   ClassSerializerInterceptor,
   UseInterceptors,
-} from '@nestjs/common';
-import { SubjectsService } from './subjects.service';
-import { CreateSubjectDto } from './dto/create-subject.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../users/entities/user.entity';
-import { SubjectResponseDto } from './dto/subject-response.dto';
-import { plainToClass } from 'class-transformer';
+} from "@nestjs/common";
+import { SubjectsService } from "./subjects.service";
+import { CreateSubjectDto } from "./dto/create-subject.dto";
+import { UpdateSubjectDto } from "./dto/update-subject.dto";
+import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../../auth/guards/roles.guard";
+import { Roles } from "../../auth/decorators/roles.decorator";
+import { UserRole } from "../../users/entities/user.entity";
+import { SubjectResponseDto } from "./dto/subject-response.dto";
+import { plainToClass } from "class-transformer";
 
-@Controller('subjects')
+@Controller("subjects")
 @UseInterceptors(ClassSerializerInterceptor)
 export class SubjectsController {
-  constructor(private readonly subjectsService: SubjectsService) { }
+  constructor(private readonly subjectsService: SubjectsService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -33,22 +36,41 @@ export class SubjectsController {
   @Get()
   async findAll() {
     const subjects = await this.subjectsService.findAll();
-    return subjects.map(subject => plainToClass(SubjectResponseDto, subject));
+    return subjects.map((subject) => plainToClass(SubjectResponseDto, subject));
   }
 
-  @Get('with-quiz-count')
+  @Get("with-quiz-count")
   async findWithQuizCount() {
     const subjects = await this.subjectsService.findWithQuizCount();
-    return subjects.map(subject => {
+    return subjects.map((subject) => {
       const dto = plainToClass(SubjectResponseDto, subject);
       dto.quizCount = parseInt(subject.quizCount, 10);
       return dto;
     });
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
+  @Get(":id")
+  async findOne(@Param("id") id: string) {
     const subject = await this.subjectsService.findOne(+id);
     return plainToClass(SubjectResponseDto, subject);
   }
-} 
+
+  @Put(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  async update(
+    @Param("id") id: string,
+    @Body() updateSubjectDto: UpdateSubjectDto
+  ) {
+    const subject = await this.subjectsService.update(+id, updateSubjectDto);
+    return plainToClass(SubjectResponseDto, subject);
+  }
+
+  @Delete(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  async remove(@Param("id") id: string) {
+    await this.subjectsService.remove(+id);
+    return { message: "Предмет успешно удален" };
+  }
+}

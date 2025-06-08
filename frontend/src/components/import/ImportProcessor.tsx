@@ -7,7 +7,7 @@ interface ImportProcessorProps {
   file: File | null;
   title: string;
   description: string;
-  categoryId: number;
+  subjectId: number;
   onImportStart: () => void;
   onProgress: (progress: number, status: string, step: number) => void;
   onSuccess: (
@@ -22,7 +22,7 @@ export function ImportProcessor({
   file,
   title,
   description,
-  categoryId,
+  subjectId,
   onImportStart,
   onProgress,
   onSuccess,
@@ -98,7 +98,7 @@ export function ImportProcessor({
             console.log("Sending to API:", {
               title: quizTitle,
               description: quizDescription,
-              categoryId: categoryId,
+              subjectId: subjectId,
               questionsCount: questionsArray.length,
               firstQuestion: questionsArray[0],
             });
@@ -106,7 +106,7 @@ export function ImportProcessor({
             await quizApi.importQuizFromFile(
               quizTitle,
               quizDescription,
-              categoryId,
+              subjectId,
               questionsArray
             );
 

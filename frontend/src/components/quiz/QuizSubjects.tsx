@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { QuizSubject, Subject } from "@/lib/types";
-import { getSubjectIcon } from "@/lib/constants/subject-icons";
-import { getRadixSubjectIcon } from "@/lib/constants/radix-subject-icons.tsx";
+import { getAutoSubjectIcon } from "@/lib/constants/radix-subject-icons";
 
 interface QuizSubjectsProps {
   selectedSubject?: QuizSubject | number;
@@ -43,7 +42,7 @@ export function QuizSubjects({
         >
           <CardContent className="p-4 text-center flex flex-col items-center justify-center gap-2">
             <span className="flex items-center justify-center p-2 rounded-full bg-muted">
-              {getRadixSubjectIcon(subject.name)}
+              {getAutoSubjectIcon(subject.name)}
             </span>
             <CardTitle className="text-lg">{subject.name}</CardTitle>
           </CardContent>

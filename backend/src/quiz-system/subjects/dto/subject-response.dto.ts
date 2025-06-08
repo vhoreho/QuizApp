@@ -1,4 +1,4 @@
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose } from "class-transformer";
 
 @Exclude()
 export class SubjectResponseDto {
@@ -9,8 +9,5 @@ export class SubjectResponseDto {
   name: string;
 
   @Expose()
-  icon: string;
-
-  @Expose()
   quizCount?: number;
-} 
+}

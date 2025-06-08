@@ -1,7 +1,7 @@
 export enum UserRole {
-  ADMIN = 'administrator',
-  TEACHER = 'teacher',
-  STUDENT = 'student'
+  ADMIN = "administrator",
+  TEACHER = "teacher",
+  STUDENT = "student",
 }
 
 export interface User {
@@ -13,10 +13,10 @@ export interface User {
 }
 
 export enum QuestionType {
-  SINGLE_CHOICE = 'SINGLE_CHOICE',
-  MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
-  MATCHING = 'MATCHING',
-  TRUE_FALSE = 'TRUE_FALSE'
+  SINGLE_CHOICE = "SINGLE_CHOICE",
+  MULTIPLE_CHOICE = "MULTIPLE_CHOICE",
+  MATCHING = "MATCHING",
+  TRUE_FALSE = "TRUE_FALSE",
 }
 
 export interface Question {
@@ -38,7 +38,7 @@ export enum QuizSubject {
   LANGUAGES = "languages",
   HISTORY = "history",
   LITERATURE = "literature",
-  OTHER = "other"
+  OTHER = "other",
 }
 
 export interface QuizSubjectInfo {
@@ -51,44 +51,43 @@ export const QUIZ_SUBJECTS: QuizSubjectInfo[] = [
   {
     id: QuizSubject.PROGRAMMING,
     name: "Программирование",
-    icon: "💻"
+    icon: "💻",
   },
   {
     id: QuizSubject.MATHEMATICS,
     name: "Математика",
-    icon: "📐"
+    icon: "📐",
   },
   {
     id: QuizSubject.SCIENCE,
     name: "Естественные науки",
-    icon: "🔬"
+    icon: "🔬",
   },
   {
     id: QuizSubject.LANGUAGES,
     name: "Языки",
-    icon: "🌍"
+    icon: "🌍",
   },
   {
     id: QuizSubject.HISTORY,
     name: "История",
-    icon: "📜"
+    icon: "📜",
   },
   {
     id: QuizSubject.LITERATURE,
     name: "Литература",
-    icon: "📚"
+    icon: "📚",
   },
   {
     id: QuizSubject.OTHER,
     name: "Другое",
-    icon: "📌"
-  }
+    icon: "📌",
+  },
 ];
 
 export interface Subject {
   id: number;
   name: string;
-  icon: string;
   quizCount?: number;
 }
 
@@ -151,4 +150,4 @@ export interface Group {
   description: string;
   createdById: number;
   studentIds: number[];
-} 
+}

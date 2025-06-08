@@ -9,7 +9,6 @@ import { isValidUser } from "@/lib/utils";
 export default function SubjectManagementPage() {
   const navigate = useNavigate();
 
-  // Проверяем роль пользователя
   const { user, isLoading } = useRequireRole([UserRole.ADMIN]);
 
   if (isLoading) {

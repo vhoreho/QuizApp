@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class RemoveDescriptionFromSubjects1716150360000
+export class RemoveDescriptionFromSubjectTable1749444400000
   implements MigrationInterface
 {
-  name = "RemoveDescriptionFromSubjects1716150360000";
+  name = "RemoveDescriptionFromSubjectTable1749444400000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Проверяем существование таблицы subject и колонки description
@@ -19,8 +19,9 @@ export class RemoveDescriptionFromSubjects1716150360000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Добавляем колонку обратно с дефолтным значением
     await queryRunner.query(
-      `ALTER TABLE "subject" ADD "description" character varying NOT NULL DEFAULT 'No description'`
+      `ALTER TABLE "subject" ADD COLUMN "description" character varying DEFAULT 'No description'`
     );
   }
 }
