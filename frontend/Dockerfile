@@ -1,21 +1,32 @@
-FROM node:18-alpine as build
+# Используем Node.js 18 как базовый образ для сборки
+FROM node:18-alpine AS build
 
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
+# Копируем package.json и package-lock.json
 COPY package*.json ./
 
-RUN npm install
+# Устанавливаем зависимости
+RUN npm ci
 
+# Копируем исходный код
 COPY . .
 
+# Собираем приложение для продакшена
 RUN npm run build
 
-FROM nginx:alpine
+# Используем Nginx для продакшена
+FROM nginx:alpine AS production
 
+# Копируем собранное приложение в Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Копируем конфигурацию Nginx
+COPY nginx.conf /etc/nginx/nginx.conf
 
-EXPOSE 5173
+# Открываем порт 80
+EXPOSE 80
 
+# Запускаем Nginx
 CMD ["nginx", "-g", "daemon off;"] 

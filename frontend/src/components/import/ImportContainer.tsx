@@ -75,7 +75,7 @@ export function ImportContainer() {
     file,
     title,
     description,
-    categoryId: null,
+    subjectId: 1, // Default subject ID
     onImportStart: handleImportStart,
     onProgress: handleImportProgress,
     onSuccess: handleImportSuccess,
