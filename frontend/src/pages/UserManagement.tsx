@@ -37,7 +37,7 @@ export default function UserManagement() {
     currentUser.role !== UserRole.ADMIN
   ) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
         <div className="text-center">
           <div className="w-16 h-16 border-t-4 border-primary border-solid rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Загрузка...</p>
@@ -47,7 +47,7 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
       <Header user={currentUser} onLogout={handleLogout} />
 
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -65,7 +65,9 @@ export default function UserManagement() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <PersonIcon className="h-6 w-6" />
+                <div className="p-1.5 rounded-md bg-primary/10">
+                  <PersonIcon className="h-6 w-6 text-primary" />
+                </div>
                 Управление пользователями
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -76,12 +78,15 @@ export default function UserManagement() {
 
           <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center" size="sm">
+              <Button
+                className="flex items-center bg-primary hover:bg-primary/90"
+                size="sm"
+              >
                 <PlusIcon className="mr-2 h-4 w-4" />
                 Добавить пользователя
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] bg-background/95 backdrop-blur-sm border-border">
               <CreateUserForm onSuccess={() => setIsCreateUserOpen(false)} />
             </DialogContent>
           </Dialog>
@@ -93,13 +98,16 @@ export default function UserManagement() {
         </div>
 
         {/* Users Table Section */}
-        <Card className="bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">
+        <Card className="border-border bg-background/60 backdrop-blur-sm">
+          <CardHeader className="border-b border-border bg-muted/30">
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <div className="p-1 rounded-md bg-primary/10">
+                <PersonIcon className="h-4 w-4 text-primary" />
+              </div>
               Список пользователей
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <UsersTable />
           </CardContent>
         </Card>
