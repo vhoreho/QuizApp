@@ -10,21 +10,31 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.usersService.findByUsername(username);
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
-      return result;
+    try {
+      const user = await this.usersService.findByUsername(username);
+
+      if (!user) {
+        return null;
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (isPasswordValid) {
+        const { password, ...result } = user;
+        return result;
+      }
+
+      return null;
+    } catch (error) {
+      return null;
     }
-    return null;
   }
 
   async login(user: any) {
     const payload = { username: user.username, sub: user.id, role: user.role };
-
-    // Исключаем чувствительные данные с помощью DTO
     const userResponse = UserResponseDto.fromEntity(user);
 
     return {
@@ -38,16 +48,12 @@ export class AuthService {
   }
 
   async createUser(userData: any, creatorRole: UserRole) {
-    // Check if creator is admin
     if (creatorRole !== UserRole.ADMIN) {
       throw new UnauthorizedException('Only administrators can create user accounts');
     }
 
-    // Hash the password
     userData.password = await this.hashPassword(userData.password);
-
-    // Create the user and return safe user data
     const user = await this.usersService.create(userData);
-    return user; // Уже безопасный объект благодаря использованию UserResponseDto в сервисе
+    return user;
   }
 }

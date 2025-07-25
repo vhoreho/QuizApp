@@ -4,7 +4,6 @@ import { Repository, Not } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -14,18 +13,14 @@ export class UsersService {
   ) { }
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    // Хэшируем пароль перед сохранением
-    if (createUserDto.password) {
-      createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
-    }
-
     const user = this.usersRepository.create(createUserDto);
     const savedUser = await this.usersRepository.save(user);
     return UserResponseDto.fromEntity(savedUser);
   }
 
-  async findAll(): Promise<UserResponseDto[]> {
-    const users = await this.usersRepository.find();
+  async findAll(excludeId?: number): Promise<UserResponseDto[]> {
+    const whereCondition = excludeId ? { id: Not(excludeId) } : {};
+    const users = await this.usersRepository.find({ where: whereCondition });
     return users.map((user) => UserResponseDto.fromEntity(user));
   }
 
