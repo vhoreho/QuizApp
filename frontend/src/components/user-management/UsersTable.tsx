@@ -22,6 +22,12 @@ interface UsersTableProps {
   onUserSelect?: (user: User) => void;
 }
 
+const ROLE_TRANSLATIONS: Record<UserRole, string> = {
+  [UserRole.ADMIN]: "Администратор",
+  [UserRole.TEACHER]: "Преподаватель",
+  [UserRole.STUDENT]: "Студент",
+};
+
 export function UsersTable({ onUserSelect }: UsersTableProps) {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<keyof User>("id");
@@ -49,7 +55,7 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
   };
 
   if (error) {
-    return <div>Error loading users: {error.message}</div>;
+    return <div>Ошибка загрузки пользователей: {error.message}</div>;
   }
 
   const totalPages = data ? Math.ceil(data.total / 10) : 0;
@@ -76,14 +82,14 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
               className="cursor-pointer"
               onClick={() => handleSort("username")}
             >
-              Username {renderSortIcon("username")}
+              Логин {renderSortIcon("username")}
             </TableHead>
-            <TableHead>Full Name</TableHead>
+            <TableHead>Полное имя</TableHead>
             <TableHead
               className="cursor-pointer"
               onClick={() => handleSort("role")}
             >
-              Role {renderSortIcon("role")}
+              Роль {renderSortIcon("role")}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -116,7 +122,9 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
                   <TableCell>{user.id}</TableCell>
                   <TableCell>{user.username}</TableCell>
                   <TableCell>{getUserFullName(user)}</TableCell>
-                  <TableCell>{user.role}</TableCell>
+                  <TableCell>
+                    {ROLE_TRANSLATIONS[user.role as UserRole] || user.role}
+                  </TableCell>
                 </TableRow>
               ))}
         </TableBody>
@@ -124,7 +132,7 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
 
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {data ? `Total ${data.total} users` : ""}
+          {data ? `Всего ${data.total} пользователей` : ""}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -136,7 +144,7 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
             <ChevronLeftIcon className="h-4 w-4" />
           </Button>
           <div className="text-sm">
-            Page {page} of {totalPages}
+            Страница {page} из {totalPages}
           </div>
           <Button
             variant="outline"

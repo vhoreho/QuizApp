@@ -40,7 +40,7 @@ export default function UserManagement() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-t-4 border-primary border-solid rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Загрузка...</p>
         </div>
       </div>
     );
@@ -61,15 +61,15 @@ export default function UserManagement() {
               onClick={() => navigate("/admin/dashboard")}
             >
               <ArrowLeftIcon className="mr-2 h-4 w-4" />
-              Dashboard
+              Панель управления
             </Button>
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 <PersonIcon className="h-6 w-6" />
-                User Management
+                Управление пользователями
               </h1>
               <p className="text-sm text-muted-foreground">
-                Manage user accounts and permissions
+                Управление учетными записями и правами доступа
               </p>
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function UserManagement() {
             <DialogTrigger asChild>
               <Button className="flex items-center" size="sm">
                 <PlusIcon className="mr-2 h-4 w-4" />
-                Add New User
+                Добавить пользователя
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
@@ -95,7 +95,9 @@ export default function UserManagement() {
         {/* Users Table Section */}
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-lg font-medium">Users List</CardTitle>
+            <CardTitle className="text-lg font-medium">
+              Список пользователей
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <UsersTable />
