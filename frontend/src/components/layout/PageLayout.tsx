@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "./header";
 import { Footer } from "./footer";
 import { User } from "@/lib/types";
+import { useLogout } from "@/hooks/queries/useAuth";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -16,6 +17,7 @@ export function PageLayout({
   showFooter = true,
 }: PageLayoutProps) {
   const navigate = useNavigate();
+  const logoutMutation = useLogout();
 
   // Получаем пользователя из localStorage с правильной типизацией
   const userJson = localStorage.getItem("user");
@@ -43,9 +45,7 @@ export function PageLayout({
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+    logoutMutation.mutate();
   };
 
   return (
