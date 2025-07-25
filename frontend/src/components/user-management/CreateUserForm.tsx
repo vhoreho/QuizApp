@@ -32,11 +32,17 @@ import { useToast } from "@/components/ui/use-toast";
 import api from "@/api/axiosConfig";
 
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  username: z.string().min(3, "Логин должен содержать минимум 3 символа"),
+  password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
+  name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
   role: z.enum(["administrator", "teacher", "student"]),
 });
+
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  administrator: "Администратор",
+  teacher: "Преподаватель",
+  student: "Студент",
+};
 
 interface CreateUserFormProps {
   onSuccess?: () => void;
@@ -65,16 +71,17 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
-        title: "Success",
-        description: "User created successfully",
+        title: "Успешно",
+        description: "Пользователь успешно создан",
       });
       form.reset();
       onSuccess?.();
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to create user",
+        title: "Ошибка",
+        description:
+          error.response?.data?.message || "Не удалось создать пользователя",
         variant: "destructive",
       });
     },
@@ -92,9 +99,9 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Create New User</h2>
+        <h2 className="text-lg font-semibold">Создание нового пользователя</h2>
         <p className="text-sm text-muted-foreground">
-          Add a new user to the system
+          Добавление нового пользователя в систему
         </p>
       </div>
 
@@ -105,9 +112,9 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Username</FormLabel>
+                <FormLabel>Логин</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter username" {...field} />
+                  <Input placeholder="Введите логин" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -119,11 +126,11 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel>Пароль</FormLabel>
                 <FormControl>
                   <Input
                     type="password"
-                    placeholder="Enter password"
+                    placeholder="Введите пароль"
                     {...field}
                   />
                 </FormControl>
@@ -137,9 +144,9 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Full Name</FormLabel>
+                <FormLabel>Полное имя</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter full name" {...field} />
+                  <Input placeholder="Введите полное имя" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -151,20 +158,26 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
             name="role"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Role</FormLabel>
+                <FormLabel>Роль</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
+                      <SelectValue placeholder="Выберите роль" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="administrator">Administrator</SelectItem>
+                    <SelectItem value="student">
+                      {ROLE_TRANSLATIONS.student}
+                    </SelectItem>
+                    <SelectItem value="teacher">
+                      {ROLE_TRANSLATIONS.teacher}
+                    </SelectItem>
+                    <SelectItem value="administrator">
+                      {ROLE_TRANSLATIONS.administrator}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -173,7 +186,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
           />
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create User"}
+            {isLoading ? "Создание..." : "Создать пользователя"}
           </Button>
         </form>
       </Form>
