@@ -4,6 +4,9 @@ FROM node:18-alpine AS base
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
+# Устанавливаем netcat для проверки доступности базы данных
+RUN apk add --no-cache netcat-openbsd
+
 # Копируем package.json и package-lock.json
 COPY package*.json ./
 
@@ -22,20 +25,31 @@ RUN npm run build
 
 # Финальный этап
 FROM base AS production
-# Копируем только production зависимости
-COPY --from=deps /app/node_modules ./node_modules
-# Копируем собранное приложение
-COPY --from=build /app/dist ./dist
-# Копируем необходимые файлы
-COPY package*.json ./
 
 # Создаем пользователя для безопасности
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nestjs -u 1001
+RUN addgroup -g 1001 -S nodejs && \
+  adduser -S nestjs -u 1001 -G nodejs
+
+# Устанавливаем владельца для рабочей директории
+RUN chown -R nestjs:nodejs /app
+
+# Копируем только production зависимости
+COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
+
+# Копируем собранное приложение
+COPY --from=build --chown=nestjs:nodejs /app/dist ./dist
+
+# Копируем необходимые файлы
+COPY --chown=nestjs:nodejs package*.json ./
+COPY --chown=nestjs:nodejs entrypoint.sh ./
+
+# Делаем entrypoint.sh исполняемым
+RUN chmod +x /app/entrypoint.sh
+
 USER nestjs
 
 # Открываем порт
 EXPOSE 3000
 
-# Команда запуска
-CMD ["node", "dist/src/main"] 
+# Используем entrypoint.sh для запуска
+ENTRYPOINT ["/app/entrypoint.sh"] 

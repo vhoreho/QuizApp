@@ -26,6 +26,23 @@ services:
       timeout: 10s
       retries: 3
 
+  # pgAdmin - веб-интерфейс для PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: quiz-app-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - quiz-network
+    depends_on:
+      - db
+    restart: unless-stopped
+
   # Бэкенд NestJS
   backend:
     build:
@@ -42,17 +59,14 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-quizpassword}
       - DB_NAME=${DB_NAME:-quizdb}
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - TYPEORM_SYNCHRONIZE=true
+      - RUN_SEED=${RUN_SEED:-true}
     depends_on:
       db:
         condition: service_healthy
     networks:
       - quiz-network
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
 
   # Фронтенд React
   frontend:
@@ -76,3 +90,4 @@ networks:
 
 volumes:
   postgres_data:
+  pgadmin_data:
