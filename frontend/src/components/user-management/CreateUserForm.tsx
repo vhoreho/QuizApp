@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { authApi, RegisterUserData } from "@/api/auth";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserRole } from "@/lib/types";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import {
   Form,
@@ -21,8 +18,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -30,243 +25,158 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  UpdateIcon,
-  PersonIcon,
-  IdCardIcon,
-  LockClosedIcon,
-  PlusIcon,
-  GearIcon,
-  Cross2Icon,
-} from "@radix-ui/react-icons";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useToast } from "@/components/ui/use-toast";
+import api from "@/api/axiosConfig";
 
-// Схема для создания пользователя
-const createUserSchema = z.object({
-  name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
-  username: z
-    .string()
-    .min(3, "Имя пользователя должно содержать минимум 3 символа"),
-  password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
-  role: z.enum([UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT]),
+const formSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  role: z.enum(["administrator", "teacher", "student"]),
 });
 
-export type CreateUserFormValues = z.infer<typeof createUserSchema>;
+interface CreateUserFormProps {
+  onSuccess?: () => void;
+}
 
-export const CreateUserForm = () => {
+export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
 
-  const form = useForm<CreateUserFormValues>({
-    resolver: zodResolver(createUserSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
       username: "",
       password: "",
-      role: UserRole.STUDENT,
+      name: "",
+      role: "student",
     },
   });
 
-  const createUserMutation = useMutation({
-    mutationFn: async (data: CreateUserFormValues) => {
-      // Явно указываем типы для соответствия с RegisterUserData
-      const registerData: RegisterUserData = {
-        name: data.name,
-        username: data.username,
-        password: data.password,
-        role: data.role,
-      };
-      await authApi.registerUser(registerData);
+  const createUser = useMutation({
+    mutationFn: async (values: z.infer<typeof formSchema>) => {
+      const response = await api.post("/auth/register", values);
+      return response.data;
     },
     onSuccess: () => {
-      // Очистка формы и обновление списка пользователей
-      form.reset();
-      setError(null);
-      // Инвалидируем запрос на получение пользователей, чтобы обновить список
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+      form.reset();
+      onSuccess?.();
     },
-    onError: (err: any) => {
-      setError(
-        err.response?.data?.message || "Не удалось создать пользователя"
-      );
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to create user",
+        variant: "destructive",
+      });
     },
   });
 
-  const onSubmit = (data: CreateUserFormValues) => {
-    createUserMutation.mutate(data);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    try {
+      await createUser.mutateAsync(values);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <Card className="border border-border bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 shadow-md hover:shadow-lg transition-all duration-300 group overflow-hidden">
-      <CardHeader>
-        <div className="absolute top-2 right-2 opacity-5 group-hover:opacity-10 transition-opacity">
-          <PlusIcon className="h-32 w-32 text-indigo-500 rotate-12" />
-        </div>
-        <CardTitle className="flex items-center group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-          <div className="bg-indigo-100 p-2 rounded-full mr-2 dark:bg-indigo-900">
-            <PlusIcon className="h-5 w-5 text-indigo-500" />
-          </div>
-          Создание нового пользователя
-        </CardTitle>
-        <CardDescription>
-          Создайте нового пользователя с определенной ролью в системе
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <Alert
-            variant="destructive"
-            className="mb-4 border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-800/50 group overflow-hidden relative"
-          >
-            <Cross2Icon className="h-4 w-4 text-red-600 dark:text-red-400 absolute right-4 opacity-50" />
-            <AlertDescription className="flex items-center">
-              <div className="bg-red-100 p-1 rounded-full mr-2 dark:bg-red-900/50">
-                <Cross2Icon className="h-3 w-3 text-red-500" />
-              </div>
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Create New User</h2>
+        <p className="text-sm text-muted-foreground">
+          Add a new user to the system
+        </p>
+      </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1.5">
-                    <PersonIcon className="h-3.5 w-3.5 text-indigo-500" />
-                    Имя
-                  </FormLabel>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Username</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter username" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Enter password"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter full name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Role</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
-                    <Input
-                      placeholder="Введите полное имя пользователя"
-                      {...field}
-                      disabled={createUserMutation.isPending}
-                      className="border-indigo-100 dark:border-indigo-800/30 focus-visible:ring-indigo-500/30"
-                    />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="administrator">Administrator</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1.5">
-                    <IdCardIcon className="h-3.5 w-3.5 text-indigo-500" />
-                    Логин
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Введите логин пользователя"
-                      {...field}
-                      disabled={createUserMutation.isPending}
-                      className="border-indigo-100 dark:border-indigo-800/30 focus-visible:ring-indigo-500/30"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1.5">
-                    <LockClosedIcon className="h-3.5 w-3.5 text-indigo-500" />
-                    Пароль
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Введите пароль"
-                      {...field}
-                      disabled={createUserMutation.isPending}
-                      className="border-indigo-100 dark:border-indigo-800/30 focus-visible:ring-indigo-500/30"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1.5">
-                    <GearIcon className="h-3.5 w-3.5 text-indigo-500" />
-                    Роль
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={createUserMutation.isPending}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="border-indigo-100 dark:border-indigo-800/30 focus-visible:ring-indigo-500/30">
-                        <SelectValue placeholder="Выберите роль" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={UserRole.STUDENT}>
-                        <span className="flex items-center gap-2">
-                          <div className="bg-blue-100 dark:bg-blue-900 p-1 rounded-full">
-                            <PersonIcon className="h-3 w-3 text-blue-500" />
-                          </div>
-                          Студент
-                        </span>
-                      </SelectItem>
-                      <SelectItem value={UserRole.TEACHER}>
-                        <span className="flex items-center gap-2">
-                          <div className="bg-green-100 dark:bg-green-900 p-1 rounded-full">
-                            <GearIcon className="h-3 w-3 text-green-500" />
-                          </div>
-                          Преподаватель
-                        </span>
-                      </SelectItem>
-                      <SelectItem value={UserRole.ADMIN}>
-                        <span className="flex items-center gap-2">
-                          <div className="bg-purple-100 dark:bg-purple-900 p-1 rounded-full">
-                            <PersonIcon className="h-3 w-3 text-purple-500" />
-                          </div>
-                          Администратор
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              disabled={createUserMutation.isPending}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-            >
-              {createUserMutation.isPending ? (
-                <>
-                  <UpdateIcon className="mr-2 h-4 w-4 animate-spin" />
-                  Создание...
-                </>
-              ) : (
-                <>
-                  <PlusIcon className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
-                  Создать пользователя
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Creating..." : "Create User"}
+          </Button>
+        </form>
+      </Form>
+    </div>
   );
-};
+}

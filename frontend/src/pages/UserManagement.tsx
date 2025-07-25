@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { UserRole } from "../lib/types";
 import { useUser } from "@/contexts/UserContext";
-import { ArrowLeftIcon, PersonIcon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon, PersonIcon, PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import { Header } from "../components/layout/header";
 import { Footer } from "../components/layout/footer";
@@ -11,12 +11,15 @@ import {
   UsersTable,
 } from "@/components/user-management";
 import { useUsers } from "@/hooks/queries/useUsers";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function UserManagement() {
   const navigate = useNavigate();
   const { user: currentUser, isLoading: userLoading } = useUser();
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
 
-  // Используем новый хук для получения пользователей с первой страницей
   const { data: usersData, isLoading } = useUsers({
     page: 1,
     limit: 10,
@@ -27,7 +30,6 @@ export default function UserManagement() {
     navigate("/login");
   };
 
-  // Если данные загружаются или пользователь не админ, показать загрузку
   if (
     isLoading ||
     userLoading ||
@@ -48,48 +50,57 @@ export default function UserManagement() {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header user={currentUser} onLogout={handleLogout} />
 
-      <main className="flex-1">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center mb-6">
+      <main className="flex-1 container mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+          <div className="flex items-center mb-4 md:mb-0">
             <Button
               variant="ghost"
-              className="flex items-center text-muted-foreground mr-4 hover:bg-muted/30 transition-colors group"
+              size="sm"
+              className="mr-4 text-muted-foreground hover:text-foreground"
               onClick={() => navigate("/admin/dashboard")}
             >
-              <ArrowLeftIcon className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-              Назад
+              <ArrowLeftIcon className="mr-2 h-4 w-4" />
+              Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <div className="bg-indigo-100 dark:bg-indigo-900 p-1.5 rounded-full">
-                  <PersonIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                Управление пользователями
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <PersonIcon className="h-6 w-6 text-primary" />
+                User Management
               </h1>
-              <p className="text-muted-foreground">
-                Создание и управление учетными записями пользователей
+              <p className="text-sm text-muted-foreground">
+                Manage user accounts and permissions
               </p>
             </div>
           </div>
 
-          {/* Статистика пользователей */}
-          <UserStatisticsCards total={usersData?.total || 0} />
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Форма создания пользователя */}
-            <CreateUserForm />
-
-            {/* Таблица пользователей */}
-            <div className="bg-card rounded-lg border shadow-sm">
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4">
-                  Список пользователей
-                </h2>
-                <UsersTable />
-              </div>
-            </div>
-          </div>
+          <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center" size="sm">
+                <PlusIcon className="mr-2 h-4 w-4" />
+                Add New User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <CreateUserForm onSuccess={() => setIsCreateUserOpen(false)} />
+            </DialogContent>
+          </Dialog>
         </div>
+
+        {/* Statistics Cards */}
+        <div className="mb-8">
+          <UserStatisticsCards total={usersData?.total || 0} />
+        </div>
+
+        {/* Users Table Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Users List</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <UsersTable />
+          </CardContent>
+        </Card>
       </main>
 
       <Footer />
