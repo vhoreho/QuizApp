@@ -1,8 +1,7 @@
 import api from '../api/axiosConfig';
 
 /**
- * Utility function to check if the user is authenticated
- * and if the JWT token is valid
+ * Checks if the user is authenticated by making a lightweight API call
  */
 export const checkAuthStatus = async (): Promise<{
   isAuthenticated: boolean;
@@ -11,18 +10,11 @@ export const checkAuthStatus = async (): Promise<{
   error?: string;
 }> => {
   try {
-    // Check if token exists
-    const token = localStorage.getItem('token');
-    if (!token) {
-      return { isAuthenticated: false, error: 'No token found' };
-    }
-
-    // Try to fetch user profile
-    const response = await api.get('/student/auth-test');
+    const response = await api.get('/auth/check');
     return {
       isAuthenticated: true,
-      userId: response.data.userId,
-      username: response.data.username,
+      userId: response.data.user.id,
+      username: response.data.user.username,
     };
   } catch (error) {
     console.error('Auth check failed:', error);
@@ -34,31 +26,37 @@ export const checkAuthStatus = async (): Promise<{
 };
 
 /**
- * Utility function to check if the token is present in localStorage
+ * Gets the user data from localStorage
  */
-export const hasToken = (): boolean => {
-  return !!localStorage.getItem('token');
-};
-
-/**
- * Utility function to get the user ID from localStorage
- */
-export const getUserIdFromLocalStorage = (): number | null => {
+export const getUserFromLocalStorage = (): any | null => {
   try {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
-
-    const user = JSON.parse(userStr);
-    return user?.id || null;
+    return JSON.parse(userStr);
   } catch (error) {
-    console.error('Error getting user ID from localStorage:', error);
+    console.error('Error getting user from localStorage:', error);
     return null;
   }
 };
 
 /**
- * Checks if the authentication token cookie exists
+ * Checks if the user data exists in localStorage
  */
-export const hasAuthCookie = (): boolean => {
-  return document.cookie.split(';').some(item => item.trim().startsWith('access_token='));
+export const hasUserData = (): boolean => {
+  return !!getUserFromLocalStorage();
+};
+
+/**
+ * Checks if we should attempt authentication
+ * This is used to prevent unnecessary API calls when we know the user isn't logged in
+ */
+export const hasAuthCookie = async (): Promise<boolean> => {
+  try {
+    // Make a lightweight request to check auth status
+    const response = await api.get('/auth/check');
+    return response.data.isAuthenticated;
+  } catch (error) {
+    console.error('Auth cookie check failed:', error);
+    return false;
+  }
 }; 

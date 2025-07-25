@@ -16,30 +16,53 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (isDevelopment) {
-      console.log(`Request to ${config.url} with method ${config.method}`);
-      console.log('Request headers:', config.headers);
+      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+      if (config.data) {
+        console.log('[API Request Body]:', config.data);
+      }
+      if (config.params) {
+        console.log('[API Request Params]:', config.params);
+      }
     }
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
+    console.error('[API Request Error]:', error);
     return Promise.reject(error);
   }
 );
 
 // Add response interceptor for handling auth errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isDevelopment) {
+      console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}:`, {
+        status: response.status,
+        data: response.data,
+      });
+    }
+    return response;
+  },
   async (error) => {
+    if (isDevelopment) {
+      console.error('[API Response Error]:', {
+        config: {
+          method: error.config?.method,
+          url: error.config?.url,
+        },
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    }
+
     if (error.response?.status === 401) {
       // Clear user data
       localStorage.removeItem('user');
 
-      // Redirect to login page if not already there
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      // Let the error propagate to be handled by the components
+      return Promise.reject(error);
     }
+
     return Promise.reject(error);
   }
 );

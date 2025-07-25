@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/api/auth";
-import { User } from "@/lib/types";
+import { User, UserRole } from "@/lib/types";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
@@ -13,14 +13,14 @@ const AUTH_KEYS = {
 
 export const useProfile = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const query = useQuery<User>({
     queryKey: AUTH_KEYS.profile(),
     queryFn: authApi.getProfile,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    // Only make the request if auth cookie exists
-    enabled: hasAuthCookie(),
+    enabled: true, // Always enabled, but we'll handle the error case
   });
 
   // Handle errors
@@ -29,8 +29,10 @@ export const useProfile = () => {
       console.error("Error fetching user profile:", query.error);
       localStorage.removeItem("user");
       navigate("/login", { replace: true });
+      // Clear all queries on auth error
+      queryClient.clear();
     }
-  }, [query.error, navigate]);
+  }, [query.error, navigate, queryClient]);
 
   return query;
 };
@@ -87,7 +89,7 @@ export const useLogout = () => {
 };
 
 // Helper function to determine redirect path based on user role
-function getRedirectPathForRole(role: string): string {
+function getRedirectPathForRole(role: UserRole): string {
   switch (role) {
     case "administrator":
       return "/admin/dashboard";

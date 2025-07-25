@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@/lib/types";
 import { authApi } from "@/api/auth";
-import { hasAuthCookie } from "@/utils/authCheck";
+import { hasAuthCookie, getUserFromLocalStorage } from "@/utils/authCheck";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password"] as const;
@@ -32,10 +32,9 @@ export const useUser = () => {
 export const UserProvider = ({ children }: UserProviderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(() =>
+    getUserFromLocalStorage()
+  );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -45,7 +44,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       setError(null);
 
       // Check if auth cookie exists before making the request
-      if (!hasAuthCookie()) {
+      const hasAuth = await hasAuthCookie();
+
+      if (!hasAuth) {
         setUser(null);
         localStorage.removeItem("user");
         setIsLoading(false);
@@ -101,6 +102,10 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       navigate("/login", { replace: true });
     } catch (error) {
       console.error("Error during logout:", error);
+      // Even if the logout API call fails, we should still clear local state
+      setUser(null);
+      localStorage.removeItem("user");
+      navigate("/login", { replace: true });
     }
   };
 
