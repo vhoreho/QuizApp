@@ -17,6 +17,11 @@ interface TrueFalseQuestionProps {
   disabled?: boolean;
 }
 
+const TRUE_FALSE_OPTIONS = [
+  { value: "true", label: "Правда" },
+  { value: "false", label: "Ложь" },
+];
+
 export function TrueFalseQuestion({
   question,
   onAnswerSelect,
@@ -24,20 +29,25 @@ export function TrueFalseQuestion({
   showCorrectAnswer = false,
   disabled = false,
 }: TrueFalseQuestionProps) {
-  const options = ["Правда", "Ложь"];
-
-  const handleSelect = (option: string) => {
-    onAnswerSelect(question.id, option);
+  const handleSelect = (value: string) => {
+    onAnswerSelect(question.id, value);
   };
 
-  const isCorrectAnswer = (option: string) => {
+  const isCorrectAnswer = (value: string) => {
     if (!showCorrectAnswer || !question.correctAnswers) return false;
-    return question.correctAnswers.includes(option);
+    return question.correctAnswers.includes(value);
   };
 
-  const isIncorrectSelection = (option: string) => {
+  const isIncorrectSelection = (value: string) => {
     if (!showCorrectAnswer || !selectedAnswer) return false;
-    return selectedAnswer === option && !isCorrectAnswer(option);
+    return selectedAnswer === value && !isCorrectAnswer(value);
+  };
+
+  const getDisplayValue = (value: string) => {
+    return (
+      TRUE_FALSE_OPTIONS.find((option) => option.value === value)?.label ||
+      value
+    );
   };
 
   return (
@@ -55,27 +65,46 @@ export function TrueFalseQuestion({
       </CardHeader>
       <CardContent>
         <div className="flex gap-4">
-          {options.map((option, index) => (
+          {TRUE_FALSE_OPTIONS.map(({ value, label }) => (
             <Button
-              key={index}
-              variant={selectedAnswer === option ? "default" : "outline"}
-              onClick={() => handleSelect(option)}
+              key={value}
+              variant={selectedAnswer === value ? "default" : "outline"}
+              onClick={() => handleSelect(value)}
               disabled={disabled}
               className={`flex-1 ${
-                isCorrectAnswer(option)
+                isCorrectAnswer(value)
                   ? "border-green-500 bg-green-50 hover:bg-green-50"
                   : ""
               } 
                 ${
-                  isIncorrectSelection(option)
+                  isIncorrectSelection(value)
                     ? "border-red-500 bg-red-50 hover:bg-red-50"
                     : ""
                 }`}
             >
-              {option}
+              {label}
             </Button>
           ))}
         </div>
+        {showCorrectAnswer && selectedAnswer && (
+          <div className="mt-4 text-sm">
+            <span
+              className={
+                isCorrectAnswer(selectedAnswer)
+                  ? "text-green-600"
+                  : "text-red-600"
+              }
+            >
+              Ваш ответ: {getDisplayValue(selectedAnswer)}
+            </span>
+            {!isCorrectAnswer(selectedAnswer) && (
+              <span className="text-green-600 ml-2">
+                • Правильный ответ:{" "}
+                {getDisplayValue(question.correctAnswers[0])}
+              </span>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

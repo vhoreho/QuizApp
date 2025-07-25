@@ -1,0 +1,114 @@
+{
+  "title": "Основы JavaScript",
+  "description": "Тест на знание основ JavaScript, включая типы данных, функции и объекты",
+  "subject": {
+    "id": 1,
+    "name": "JavaScript"
+  },
+  "timeLimit": 30,
+  "passingScore": 80,
+  "questions": [
+    {
+      "text": "Какие типы данных существуют в JavaScript?",
+      "type": "MULTIPLE_CHOICE",
+      "points": 2,
+      "order": 1,
+      "options": [
+        "String",
+        "Number",
+        "Character",
+        "Boolean",
+        "Float",
+        "Object",
+        "Undefined"
+      ],
+      "correctAnswers": ["String", "Number", "Boolean", "Object", "Undefined"]
+    },
+    {
+      "text": "Чему равно значение выражения '1' + 2?",
+      "type": "SINGLE_CHOICE",
+      "points": 1,
+      "order": 2,
+      "options": ["12", "3", "1 + 2", "NaN"],
+      "correctAnswers": ["12"]
+    },
+    {
+      "text": "Сопоставьте методы массивов с их описанием",
+      "type": "MATCHING",
+      "points": 3,
+      "order": 3,
+      "options": [
+        ["push()", "Добавляет элемент в конец массива"],
+        ["pop()", "Удаляет последний элемент массива"],
+        ["shift()", "Удаляет первый элемент массива"],
+        ["unshift()", "Добавляет элемент в начало массива"]
+      ],
+      "correctAnswers": [
+        ["push()", "Добавляет элемент в конец массива"],
+        ["pop()", "Удаляет последний элемент массива"],
+        ["shift()", "Удаляет первый элемент массива"],
+        ["unshift()", "Добавляет элемент в начало массива"]
+      ]
+    },
+    {
+      "text": "В JavaScript функции являются объектами первого класса",
+      "type": "TRUE_FALSE",
+      "points": 1,
+      "order": 4,
+      "options": ["true", "false"],
+      "correctAnswers": ["true"]
+    },
+    {
+      "text": "Какой оператор используется для строгого сравнения в JavaScript?",
+      "type": "SINGLE_CHOICE",
+      "points": 1,
+      "order": 5,
+      "options": ["==", "===", "=", "!="],
+      "correctAnswers": ["==="]
+    },
+    {
+      "text": "Выберите все истинные утверждения о замыканиях (closures) в JavaScript",
+      "type": "MULTIPLE_CHOICE",
+      "points": 2,
+      "order": 6,
+      "options": [
+        "Замыкание позволяет функции сохранять доступ к переменным из внешней области видимости",
+        "Замыкания увеличивают производительность кода",
+        "Замыкания могут использоваться для создания приватных переменных",
+        "Замыкания работают только с arrow-функциями",
+        "Замыкания помогают избежать глобальных переменных"
+      ],
+      "correctAnswers": [
+        "Замыкание позволяет функции сохранять доступ к переменным из внешней области видимости",
+        "Замыкания могут использоваться для создания приватных переменных",
+        "Замыкания помогают избежать глобальных переменных"
+      ]
+    },
+    {
+      "text": "Сопоставьте типы данных с их примерами",
+      "type": "MATCHING",
+      "points": 2,
+      "order": 7,
+      "options": [
+        ["String", "'Hello, World!'"],
+        ["Number", "42"],
+        ["Boolean", "true"],
+        ["Object", "{ name: 'John' }"]
+      ],
+      "correctAnswers": [
+        ["String", "'Hello, World!'"],
+        ["Number", "42"],
+        ["Boolean", "true"],
+        ["Object", "{ name: 'John' }"]
+      ]
+    },
+    {
+      "text": "Оператор typeof null возвращает 'object'",
+      "type": "TRUE_FALSE",
+      "points": 1,
+      "order": 8,
+      "options": ["true", "false"],
+      "correctAnswers": ["true"]
+    }
+  ]
+}
