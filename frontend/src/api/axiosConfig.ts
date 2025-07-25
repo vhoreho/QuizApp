@@ -1,29 +1,68 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000';
+const isDevelopment = import.meta.env.DEV;
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
+  timeout: 15000,
 });
 
-// Add request logging
-api.interceptors.request.use(config => {
-  const method = config.method?.toUpperCase() || 'GET';
-  console.log(`Making ${method} request to ${config.baseURL}${config.url}`);
-  return config;
-});
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    if (isDevelopment) {
+      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+      if (config.data) {
+        console.log('[API Request Body]:', config.data);
+      }
+      if (config.params) {
+        console.log('[API Request Params]:', config.params);
+      }
+    }
+    return config;
+  },
+  (error) => {
+    console.error('[API Request Error]:', error);
+    return Promise.reject(error);
+  }
+);
 
-// Add response logging
+// Add response interceptor for handling auth errors
 api.interceptors.response.use(
-  response => {
-    console.log(`Response from ${response.config.url}: ${response.status}`);
+  (response) => {
+    if (isDevelopment) {
+      console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}:`, {
+        status: response.status,
+        data: response.data,
+      });
+    }
     return response;
   },
-  error => {
-    console.error(`API Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
+  async (error) => {
+    if (isDevelopment) {
+      console.error('[API Response Error]:', {
+        config: {
+          method: error.config?.method,
+          url: error.config?.url,
+        },
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    }
+
+    if (error.response?.status === 401) {
+      // Clear user data
+      localStorage.removeItem('user');
+
+      // Let the error propagate to be handled by the components
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );

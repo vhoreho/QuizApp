@@ -1,111 +1,61 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, UserRole, Quiz as QuizType } from "../../lib/types";
 import { Header } from "../../components/layout/header";
 import { Button } from "../../components/ui/button";
-import { ArrowLeftIcon, PlusIcon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon, UploadIcon } from "@radix-ui/react-icons";
+import { useRequireRole } from "@/hooks/queries/useAuth";
+import { useLogout } from "@/hooks/queries/useAuth";
+import { UserRole, User } from "@/lib/types";
+import { ROUTES } from "@/lib/constants";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { teacherApi } from "../../api/quizApi";
-import { authApi } from "../../api/auth";
-import { toast } from "../../components/ui/use-toast";
+  useTeacherQuizzes,
+  useTeacherDeleteQuiz,
+  useTeacherUpdateQuizStatus,
+} from "@/hooks/queries/useQuizzes";
+import QuizManagementTable from "@/components/quiz/QuizManagementTable";
+import { isValidUser } from "@/lib/utils";
 
 export default function TeacherQuizManagement() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [quizzes, setQuizzes] = useState<QuizType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserAndQuizzes = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
+  // Проверяем доступ и получаем профиль пользователя
+  const {
+    user,
+    isLoading: isUserLoading,
+    hasAccess,
+  } = useRequireRole([UserRole.TEACHER]);
 
-      try {
-        const user = await authApi.getProfile();
-        if (user.role !== UserRole.TEACHER) {
-          navigate("/not-authorized");
-          return;
-        }
+  // Получаем список тестов преподавателя
+  const { data: quizzes = [], isLoading: isQuizzesLoading } =
+    useTeacherQuizzes();
 
-        setCurrentUser(user);
-        await fetchQuizzes();
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        navigate("/login");
-      }
-    };
+  // Мутации для действий с тестами
+  const deleteQuizMutation = useTeacherDeleteQuiz();
+  const updateQuizStatusMutation = useTeacherUpdateQuizStatus();
+  const logoutMutation = useLogout();
 
-    fetchUserAndQuizzes();
-  }, [navigate]);
-
-  const fetchQuizzes = async () => {
-    setIsLoading(true);
-    try {
-      const fetchedQuizzes = await teacherApi.getMyQuizzes();
-      setQuizzes(fetchedQuizzes);
-    } catch (error) {
-      console.error("Error fetching quizzes:", error);
-      toast({
-        variant: "destructive",
-        title: "Ошибка",
-        description:
-          "Не удалось загрузить тесты. Пожалуйста, попробуйте позже.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const isLoading = isUserLoading || isQuizzesLoading;
 
   const handleDeleteQuiz = async (quizId: number) => {
-    if (window.confirm("Вы уверены, что хотите удалить этот тест?")) {
-      try {
-        await teacherApi.deleteQuiz(quizId);
-        toast({
-          title: "Успешно",
-          description: "Тест был удален",
-        });
-        fetchQuizzes();
-      } catch (error) {
-        console.error("Error deleting quiz:", error);
-        toast({
-          variant: "destructive",
-          title: "Ошибка",
-          description: "Не удалось удалить тест",
-        });
-      }
-    }
+    return deleteQuizMutation.mutateAsync(quizId);
+  };
+
+  const handleUpdateQuizStatus = async (
+    quizId: number,
+    isPublished: boolean
+  ) => {
+    return updateQuizStatusMutation.mutateAsync({ id: quizId, isPublished });
   };
 
   const handleLogout = async () => {
-    await authApi.logout();
-    setCurrentUser(null);
-    navigate("/login");
+    await logoutMutation.mutateAsync();
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+  const handleCreateQuiz = () => {
+    navigate(ROUTES.CREATE_QUIZ);
+  };
+
+  const handleImportQuiz = () => {
+    navigate(ROUTES.IMPORT_QUIZ);
   };
 
   if (isLoading) {
@@ -121,7 +71,7 @@ export default function TeacherQuizManagement() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Header user={currentUser!} onLogout={handleLogout} />
+      <Header user={isValidUser(user) ? user : null} onLogout={handleLogout} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
@@ -142,93 +92,21 @@ export default function TeacherQuizManagement() {
             </div>
           </div>
 
-          <Card className="border border-border">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Мои тесты</CardTitle>
-                <CardDescription>Все тесты, созданные вами</CardDescription>
-              </div>
-              <Button
-                className="flex items-center"
-                onClick={() => navigate("/create")}
-              >
-                <PlusIcon className="mr-2 h-4 w-4" />
-                Создать тест
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {quizzes.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    У вас пока нет созданных тестов
-                  </p>
-                  <Button onClick={() => navigate("/create")}>
-                    <PlusIcon className="mr-2 h-4 w-4" />
-                    Создать первый тест
-                  </Button>
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Название</TableHead>
-                        <TableHead>Описание</TableHead>
-                        <TableHead>Дата создания</TableHead>
-                        <TableHead>Статус</TableHead>
-                        <TableHead className="text-right">Действия</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {quizzes.map((quiz) => (
-                        <TableRow key={quiz.id}>
-                          <TableCell className="font-medium">
-                            {quiz.title}
-                          </TableCell>
-                          <TableCell>{quiz.description}</TableCell>
-                          <TableCell>{formatDate(quiz.createdAt)}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                quiz.isPublished ? "success" : "secondary"
-                              }
-                            >
-                              {quiz.isPublished ? "Опубликован" : "Черновик"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => navigate(`/quiz/${quiz.id}`)}
-                            >
-                              Просмотр
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => navigate(`/results/${quiz.id}`)}
-                            >
-                              Результаты
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteQuiz(quiz.id)}
-                            >
-                              Удалить
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex justify-end gap-3 mb-6">
+            <Button variant="outline" onClick={handleImportQuiz}>
+              <UploadIcon className="mr-2 h-4 w-4" /> Импортировать тест
+            </Button>
+            <Button onClick={handleCreateQuiz}>Создать новый тест</Button>
+          </div>
+
+          <QuizManagementTable
+            userRole={UserRole.TEACHER}
+            quizzes={quizzes}
+            isLoading={isLoading}
+            onCreateQuiz={handleCreateQuiz}
+            onDeleteQuiz={handleDeleteQuiz}
+            onUpdateQuizStatus={handleUpdateQuizStatus}
+          />
         </div>
       </main>
 

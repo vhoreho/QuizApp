@@ -1,31 +1,12 @@
 import api from './axiosConfig';
-import { UserRole, User } from '../lib/types';
-
-export interface AuthResponse {
-  access_token: string;
-  user: User;
-}
-
-export interface LoginData {
-  username: string;
-  password: string;
-}
-
-export interface RegisterUserData {
-  name: string;
-  email: string;
-  username: string;
-  password: string;
-  role: UserRole;
-}
+import { LoginData, AuthResponse, RegisterUserData, User } from '@/lib/types';
 
 export const authApi = {
   login: async (data: LoginData): Promise<AuthResponse> => {
     const response = await api.post('/auth/login', data);
 
-    // Store token for auth interceptor
-    if (response.data.access_token) {
-      localStorage.setItem('token', response.data.access_token);
+    // Store user data only (token is in HTTP-only cookie)
+    if (response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
 
@@ -33,7 +14,7 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
-    localStorage.removeItem('token');
+    await api.post('/auth/logout');
     localStorage.removeItem('user');
   },
 
@@ -47,28 +28,12 @@ export const authApi = {
     return response.data;
   },
 
-  // Set up interceptor for adding the token to all requests
-  setupAuthInterceptor: () => {
-    api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-
-    // Add response interceptor to handle 401 errors
-    api.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response && error.response.status === 401) {
-          // Token expired or invalid, log the user out
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
+  checkAuth: async (): Promise<{ isAuthenticated: boolean; user: User | null }> => {
+    try {
+      const response = await api.get('/auth/check');
+      return response.data;
+    } catch (error) {
+      return { isAuthenticated: false, user: null };
+    }
   }
 }; 

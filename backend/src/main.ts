@@ -1,27 +1,40 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { Logger } from 'nestjs-pino';
+import * as cookieParser from 'cookie-parser';
+import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
+  // Create logger instance
+  const logger = new Logger('Bootstrap');
 
-  const logger = app.get(Logger);
-  app.useLogger(logger);
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.enableCors();
+  try {
+    // Create the application with logging configuration
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+      bufferLogs: true,
+    });
 
-  const port = process.env.PORT || process.env.BACKEND_PORT || 3000;
-  const host = process.env.HOST || 'localhost';
+    const configService = app.get(ConfigService);
 
-  await app.listen(port, host);
+    // Enable CORS with credentials
+    app.enableCors({
+      origin: configService.get('FRONTEND_URL') || 'http://localhost:5173',
+      credentials: true,
+    });
 
-  logger.log(`🚀 Application is running on: http://${host}:${port}`);
-  logger.log(`Server started successfully at ${new Date().toISOString()}`);
+    // Enable cookie parsing
+    app.use(cookieParser());
+
+    const port = configService.get('PORT') || 3000;
+    await app.listen(port);
+
+    logger.log(`🚀 Application is running on: http://localhost:${port}`);
+    logger.log(`Environment: ${configService.get('NODE_ENV')}`);
+  } catch (error) {
+    logger.error('Failed to start application:', error);
+    process.exit(1);
+  }
 }
-bootstrap().catch(err => {
-  console.error('Error during application bootstrap', err);
-  process.exit(1);
-}); 
+
+bootstrap();
