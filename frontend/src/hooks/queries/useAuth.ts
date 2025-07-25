@@ -28,7 +28,7 @@ export const useProfile = () => {
     if (query.error) {
       console.error("Error fetching user profile:", query.error);
       localStorage.removeItem("user");
-      navigate("/login");
+      navigate("/login", { replace: true });
     }
   }, [query.error, navigate]);
 
@@ -38,15 +38,19 @@ export const useProfile = () => {
 export const useLogin = () => {
   const queryClient = useQueryClient();
   const { updateUser } = useUser();
+  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (credentials: { username: string; password: string }) =>
       authApi.login(credentials),
     onSuccess: (data) => {
-      // Обновляем данные пользователя в контексте
+      // Update user data in context
       updateUser(data.user);
-      // После успешного входа обновляем данные профиля
+      // Invalidate profile data after successful login
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.profile() });
+      // Navigate to appropriate page based on user role
+      const redirectPath = getRedirectPathForRole(data.user.role);
+      navigate(redirectPath, { replace: true });
     },
   });
 };
@@ -58,9 +62,9 @@ export const useLogout = () => {
 
   return useMutation({
     mutationFn: authApi.logout,
-    onSuccess: () => {
+    onSuccess: async () => {
       // Call logout from context
-      logout();
+      await logout();
 
       // Invalidate all queries
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
@@ -76,24 +80,38 @@ export const useLogout = () => {
       // Clear query cache
       queryClient.clear();
 
-      // Redirect to login
-      window.location.href = "/login";
+      // Navigate to login using React Router
+      navigate("/login", { replace: true });
     },
   });
 };
 
-// Создаем повторно используемую функцию для проверки роли
+// Helper function to determine redirect path based on user role
+function getRedirectPathForRole(role: string): string {
+  switch (role) {
+    case "administrator":
+      return "/admin/dashboard";
+    case "teacher":
+      return "/teacher/dashboard";
+    case "student":
+      return "/student/dashboard";
+    default:
+      return "/";
+  }
+}
+
+// Role check hook
 export const useRequireRole = (allowedRoles?: UserRole[]) => {
   const { data: user, isLoading, error } = useProfile();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoading && user) {
-      // Если роли не указаны, то доступ разрешен любому аутентифицированному пользователю
+      // Access is allowed for any authenticated user if no roles specified
       const hasAccess = !allowedRoles || allowedRoles.includes(user.role);
 
       if (!hasAccess) {
-        navigate("/not-authorized");
+        navigate("/not-authorized", { replace: true });
       }
     }
   }, [user, isLoading, allowedRoles, navigate]);

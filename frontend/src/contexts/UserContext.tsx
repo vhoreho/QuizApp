@@ -2,6 +2,9 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@/lib/types";
 import { authApi } from "@/api/auth";
 import { hasAuthCookie } from "@/utils/authCheck";
+import { useNavigate, useLocation } from "react-router-dom";
+
+const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password"] as const;
 
 interface UserContextType {
   user: User | null;
@@ -27,6 +30,8 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }: UserProviderProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem("user");
     return savedUser ? JSON.parse(savedUser) : null;
@@ -44,6 +49,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         setUser(null);
         localStorage.removeItem("user");
         setIsLoading(false);
+
+        // Only redirect to login if we're not already there and not on a public route
+        if (!PUBLIC_ROUTES.includes(location.pathname as any)) {
+          navigate("/login", { replace: true });
+        }
         return;
       }
 
@@ -55,6 +65,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       } else {
         setUser(null);
         localStorage.removeItem("user");
+        if (!PUBLIC_ROUTES.includes(location.pathname as any)) {
+          navigate("/login", { replace: true });
+        }
       }
     } catch (err) {
       console.error("Error fetching user data:", err);
@@ -63,6 +76,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       );
       setUser(null);
       localStorage.removeItem("user");
+      if (!PUBLIC_ROUTES.includes(location.pathname as any)) {
+        navigate("/login", { replace: true });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +86,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   useEffect(() => {
     fetchUser();
-  }, []);
+  }, [location.pathname]);
 
   const updateUser = (userData: User) => {
     setUser(userData);
@@ -82,6 +98,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       await authApi.logout();
       setUser(null);
       localStorage.removeItem("user");
+      navigate("/login", { replace: true });
     } catch (error) {
       console.error("Error during logout:", error);
     }
