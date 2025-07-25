@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
@@ -16,8 +16,20 @@ export class UsersController {
   }
 
   @Get()
-  findAll(@Query('excludeId') excludeId?: string): Promise<UserResponseDto[]> {
-    return this.usersService.findAll(excludeId ? +excludeId : undefined);
+  findAll(
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: keyof User,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+  ) {
+    return this.usersService.findAll(
+      req.user.id,
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+      sortBy,
+      sortOrder,
+    );
   }
 
   @Get(':id')

@@ -18,10 +18,26 @@ export class UsersService {
     return UserResponseDto.fromEntity(savedUser);
   }
 
-  async findAll(excludeId?: number): Promise<UserResponseDto[]> {
-    const whereCondition = excludeId ? { id: Not(excludeId) } : {};
-    const users = await this.usersRepository.find({ where: whereCondition });
-    return users.map((user) => UserResponseDto.fromEntity(user));
+  async findAll(
+    excludeId: number,
+    page: number = 1,
+    limit: number = 20,
+    sortBy: keyof User = 'id',
+    sortOrder: 'ASC' | 'DESC' = 'ASC'
+  ): Promise<{ users: UserResponseDto[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await this.usersRepository.findAndCount({
+      where: { id: Not(excludeId) },
+      order: { [sortBy]: sortOrder },
+      skip,
+      take: limit,
+    });
+
+    return {
+      users: users.map((user) => UserResponseDto.fromEntity(user)),
+      total,
+    };
   }
 
   async findOne(id: number): Promise<UserResponseDto> {
@@ -36,7 +52,6 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { username } });
   }
 
-  // New methods for admin functionality
   async updateUserRole(id: number, role: UserRole): Promise<UserResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
