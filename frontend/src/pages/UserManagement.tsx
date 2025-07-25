@@ -1,38 +1,28 @@
 import { useNavigate } from "react-router-dom";
 import { UserRole } from "../lib/types";
-import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/contexts/UserContext";
-import api from "@/api/axiosConfig";
-import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon, PersonIcon } from "@radix-ui/react-icons";
+import { Button } from "@/components/ui/button";
 import { Header } from "../components/layout/header";
 import { Footer } from "../components/layout/footer";
-// Импортируем компоненты из новой директории
 import {
   UserStatisticsCards,
   CreateUserForm,
   UsersTable,
 } from "@/components/user-management";
+import { useUsers } from "@/hooks/queries/useUsers";
 
-// Основной компонент управления пользователями
 export default function UserManagement() {
   const navigate = useNavigate();
   const { user: currentUser, isLoading: userLoading } = useUser();
 
-  // Хук для получения списка пользователей
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
-      const response = await api.get("/users");
-      return response.data;
-    },
-    // Не запрашивать данные, если пользователь не админ
-    enabled:
-      !userLoading && !!currentUser && currentUser.role === UserRole.ADMIN,
+  // Используем новый хук для получения пользователей с первой страницей
+  const { data: usersData, isLoading } = useUsers({
+    page: 1,
+    limit: 10,
   });
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
   };
@@ -83,14 +73,21 @@ export default function UserManagement() {
           </div>
 
           {/* Статистика пользователей */}
-          <UserStatisticsCards users={users} />
+          <UserStatisticsCards total={usersData?.total || 0} />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Форма создания пользователя */}
             <CreateUserForm />
 
             {/* Таблица пользователей */}
-            <UsersTable users={users} />
+            <div className="bg-card rounded-lg border shadow-sm">
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-4">
+                  Список пользователей
+                </h2>
+                <UsersTable />
+              </div>
+            </div>
           </div>
         </div>
       </main>
