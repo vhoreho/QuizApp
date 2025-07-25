@@ -54,4 +54,11 @@ export const getUserIdFromLocalStorage = (): number | null => {
     console.error('Error getting user ID from localStorage:', error);
     return null;
   }
+};
+
+/**
+ * Checks if the authentication token cookie exists
+ */
+export const hasAuthCookie = (): boolean => {
+  return document.cookie.split(';').some(item => item.trim().startsWith('access_token='));
 }; 

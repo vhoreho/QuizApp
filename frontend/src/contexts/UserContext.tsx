@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@/lib/types";
 import { authApi } from "@/api/auth";
+import { hasAuthCookie } from "@/utils/authCheck";
 
 interface UserContextType {
   user: User | null;
@@ -38,6 +39,14 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       setIsLoading(true);
       setError(null);
 
+      // Check if auth cookie exists before making the request
+      if (!hasAuthCookie()) {
+        setUser(null);
+        localStorage.removeItem("user");
+        setIsLoading(false);
+        return;
+      }
+
       const { isAuthenticated, user } = await authApi.checkAuth();
 
       if (isAuthenticated && user) {
@@ -72,6 +81,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     try {
       await authApi.logout();
       setUser(null);
+      localStorage.removeItem("user");
     } catch (error) {
       console.error("Error during logout:", error);
     }

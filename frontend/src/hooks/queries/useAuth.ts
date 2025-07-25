@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/api/auth";
-import { User, UserRole } from "@/lib/types";
+import { User } from "@/lib/types";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
+import { hasAuthCookie } from "@/utils/authCheck";
 
 const AUTH_KEYS = {
   all: ["auth"] as const,
@@ -18,15 +19,14 @@ export const useProfile = () => {
     queryFn: authApi.getProfile,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    // Не делаем запрос, если нет токена авторизации
-    enabled: !!localStorage.getItem('token'),
+    // Only make the request if auth cookie exists
+    enabled: hasAuthCookie(),
   });
 
-  // Обрабатываем ошибки через useEffect
+  // Handle errors
   useEffect(() => {
     if (query.error) {
       console.error("Error fetching user profile:", query.error);
-      localStorage.removeItem("token");
       localStorage.removeItem("user");
       navigate("/login");
     }
@@ -59,34 +59,24 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
-      // Вызываем logout из контекста
+      // Call logout from context
       logout();
 
-      // Инвалидируем все основные ключи запросов
-      // Auth
+      // Invalidate all queries
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.all });
-
-      // Основные категории данных
       queryClient.invalidateQueries({ queryKey: ["quizzes"] });
       queryClient.invalidateQueries({ queryKey: ["results"] });
       queryClient.invalidateQueries({ queryKey: ["questions"] });
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
-
-      // Студенческие данные
       queryClient.invalidateQueries({ queryKey: ["student"] });
-
-      // Данные преподавателя
       queryClient.invalidateQueries({ queryKey: ["teacher"] });
-
-      // Ответы на тесты
       queryClient.invalidateQueries({ queryKey: ["resultAnswers"] });
 
-      // Для сохранения места в локальном хранилище, полностью очищаем кэш
-      // Это наиболее простой и надежный способ обновить все данные при следующем логине
+      // Clear query cache
       queryClient.clear();
 
-      // Используем window.location.href для гарантированного перехода на страницу логина
+      // Redirect to login
       window.location.href = "/login";
     },
   });
