@@ -151,3 +151,19 @@ export interface Group {
   createdById: number;
   studentIds: number[];
 }
+
+export interface LoginData {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: User;
+}
+
+export interface RegisterUserData {
+  name: string;
+  username: string;
+  password: string;
+  role: UserRole;
+}

@@ -13,6 +13,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable sending cookies
   timeout: 15000, // Тайм-аут в миллисекундах
 });
 
@@ -49,25 +50,16 @@ api.interceptors.request.use(
 
 // Add response interceptor
 api.interceptors.response.use(
-  (response) => {
-    // Any status code that lie within the range of 2xx cause this function to trigger
-    if (isDevelopment) {
-      console.log(`Response from ${response.config.url}:`, response.status);
-    }
-    return response;
-  },
-  (error) => {
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
-    if (error.response) {
-      console.error(
-        `Error response from ${error.config?.url}:`,
-        error.response.status,
-        error.response.data
-      );
-    } else if (error.request) {
-      console.error('Error request:', error.request);
-    } else {
-      console.error('Error message:', error.message);
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Clear local storage
+      localStorage.removeItem('user');
+
+      // Redirect to login page if not already there
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
