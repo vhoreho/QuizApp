@@ -26,19 +26,13 @@ export class LoggerMiddleware implements NestMiddleware {
       this.logger.debug(`Query Params: ${JSON.stringify(req.query)}`);
     }
 
-    // Capture response
-    const originalSend = res.send;
-    res.send = function (body: any): Response {
+    // Log response
+    res.on('finish', () => {
       const responseTime = Date.now() - startTime;
-      const contentLength = body ? body.length : 0;
-
-      // Log response
       this.logger.log(
-        `Outgoing Response - ${method} ${originalUrl} - Status: ${res.statusCode} - ${responseTime}ms - Size: ${contentLength} bytes`
+        `Outgoing Response - ${method} ${originalUrl} - Status: ${res.statusCode} - ${responseTime}ms`
       );
-
-      return originalSend.call(this, body);
-    }.bind(this);
+    });
 
     next();
   }
