@@ -65,7 +65,7 @@ export default function UserManagement() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <PersonIcon className="h-6 w-6 text-primary" />
+                <PersonIcon className="h-6 w-6" />
                 User Management
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -93,7 +93,7 @@ export default function UserManagement() {
         </div>
 
         {/* Users Table Section */}
-        <Card>
+        <Card className="bg-card">
           <CardHeader>
             <CardTitle className="text-lg font-medium">Users List</CardTitle>
           </CardHeader>
