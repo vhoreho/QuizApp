@@ -33,10 +33,25 @@ const ROLE_TRANSLATIONS: Record<UserRole, string> = {
   [UserRole.STUDENT]: "Студент",
 };
 
-const ROLE_COLORS: Record<UserRole, string> = {
-  [UserRole.ADMIN]: "bg-primary/10 text-primary border-primary/20",
-  [UserRole.TEACHER]: "bg-muted text-muted-foreground border-border",
-  [UserRole.STUDENT]: "bg-background text-foreground border-border",
+const ROLE_COLORS: Record<
+  UserRole,
+  { bg: string; text: string; border: string }
+> = {
+  [UserRole.ADMIN]: {
+    bg: "bg-blue-500/10",
+    text: "text-blue-500",
+    border: "border-blue-500/20",
+  },
+  [UserRole.TEACHER]: {
+    bg: "bg-violet-500/10",
+    text: "text-violet-500",
+    border: "border-violet-500/20",
+  },
+  [UserRole.STUDENT]: {
+    bg: "bg-green-500/10",
+    text: "text-green-500",
+    border: "border-green-500/20",
+  },
 };
 
 export function UsersTable({ onUserSelect }: UsersTableProps) {
@@ -72,7 +87,7 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
   if (error) {
     return (
       <div className="p-8 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-destructive/10 text-destructive mb-4">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 text-red-500 mb-4">
           <GearIcon className="w-6 h-6" />
         </div>
         <p className="text-sm text-muted-foreground">
@@ -102,7 +117,9 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
                 onClick={() => handleSort("id")}
               >
                 <div className="flex items-center gap-2">
-                  <IdCardIcon className="h-4 w-4 text-muted-foreground" />
+                  <div className="p-1 rounded-md bg-blue-500/10">
+                    <IdCardIcon className="h-4 w-4 text-blue-500" />
+                  </div>
                   ID {renderSortIcon("id")}
                 </div>
               </TableHead>
@@ -111,13 +128,17 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
                 onClick={() => handleSort("username")}
               >
                 <div className="flex items-center gap-2">
-                  <AvatarIcon className="h-4 w-4 text-muted-foreground" />
+                  <div className="p-1 rounded-md bg-violet-500/10">
+                    <AvatarIcon className="h-4 w-4 text-violet-500" />
+                  </div>
                   Логин {renderSortIcon("username")}
                 </div>
               </TableHead>
               <TableHead>
                 <div className="flex items-center gap-2">
-                  <PersonIcon className="h-4 w-4 text-muted-foreground" />
+                  <div className="p-1 rounded-md bg-green-500/10">
+                    <PersonIcon className="h-4 w-4 text-green-500" />
+                  </div>
                   Полное имя
                 </div>
               </TableHead>
@@ -126,7 +147,9 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
                 onClick={() => handleSort("role")}
               >
                 <div className="flex items-center gap-2">
-                  <GearIcon className="h-4 w-4 text-muted-foreground" />
+                  <div className="p-1 rounded-md bg-amber-500/10">
+                    <GearIcon className="h-4 w-4 text-amber-500" />
+                  </div>
                   Роль {renderSortIcon("role")}
                 </div>
               </TableHead>
@@ -160,15 +183,21 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
                     }
                     onClick={() => onUserSelect?.(user)}
                   >
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      #{user.id.toString().padStart(3, "0")}
+                    <TableCell className="font-mono text-sm">
+                      <span className="text-blue-500">
+                        #{user.id.toString().padStart(3, "0")}
+                      </span>
                     </TableCell>
-                    <TableCell>{user.username}</TableCell>
+                    <TableCell>
+                      <span className="text-violet-500">{user.username}</span>
+                    </TableCell>
                     <TableCell>{getUserFullName(user)}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={ROLE_COLORS[user.role as UserRole]}
+                        className={`${ROLE_COLORS[user.role as UserRole].bg} ${
+                          ROLE_COLORS[user.role as UserRole].text
+                        } ${ROLE_COLORS[user.role as UserRole].border}`}
                       >
                         {ROLE_TRANSLATIONS[user.role as UserRole]}
                       </Badge>
@@ -189,7 +218,7 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
             size="sm"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || isLoading}
-            className="h-8 w-8 p-0 flex items-center justify-center"
+            className="h-8 w-8 p-0 flex items-center justify-center bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-600 disabled:bg-muted disabled:text-muted-foreground"
           >
             <ChevronLeftIcon className="h-4 w-4" />
           </Button>
@@ -201,7 +230,7 @@ export function UsersTable({ onUserSelect }: UsersTableProps) {
             size="sm"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages || isLoading}
-            className="h-8 w-8 p-0 flex items-center justify-center"
+            className="h-8 w-8 p-0 flex items-center justify-center bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-600 disabled:bg-muted disabled:text-muted-foreground"
           >
             <ChevronRightIcon className="h-4 w-4" />
           </Button>
