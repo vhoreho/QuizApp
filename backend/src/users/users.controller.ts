@@ -23,13 +23,13 @@ export class UsersController {
     @Query('sortBy') sortBy?: keyof User,
     @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
-    return this.usersService.findAll(
-      req.user.id,
-      page ? parseInt(page, 10) : undefined,
-      limit ? parseInt(limit, 10) : undefined,
+    return this.usersService.findAll({
+      excludeId: req.user.id,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
       sortBy,
       sortOrder,
-    );
+    });
   }
 
   @Get(':id')

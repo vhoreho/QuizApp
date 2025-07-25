@@ -15,7 +15,7 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../users/entities/user.entity';
+import { UserRole, User } from '../../users/entities/user.entity';
 import { UsersService } from '../../users/users.service';
 import { QuizzesService } from '../../quiz-system/quizzes/quizzes.service';
 import { ResultsService } from '../../quiz-system/results/results.service';
@@ -39,8 +39,18 @@ export class AdminController {
 
   // User management endpoints
   @Get('users')
-  findAllUsers() {
-    return this.usersService.findAll();
+  findAllUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: keyof User,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+  ) {
+    return this.usersService.findAll({
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      sortBy,
+      sortOrder,
+    });
   }
 
   @Get('users/:id')

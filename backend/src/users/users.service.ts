@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, FindOptionsOrder } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+
+interface FindAllOptions {
+  excludeId?: number;
+  page?: number;
+  limit?: number;
+  sortBy?: keyof User;
+  sortOrder?: 'ASC' | 'DESC';
+}
 
 @Injectable()
 export class UsersService {
@@ -18,18 +26,22 @@ export class UsersService {
     return UserResponseDto.fromEntity(savedUser);
   }
 
-  async findAll(
-    excludeId: number,
-    page: number = 1,
-    limit: number = 20,
-    sortBy: keyof User = 'id',
-    sortOrder: 'ASC' | 'DESC' = 'ASC'
-  ): Promise<{ users: UserResponseDto[]; total: number }> {
+  async findAll(options: FindAllOptions = {}): Promise<{ users: UserResponseDto[]; total: number }> {
+    const {
+      excludeId,
+      page = 1,
+      limit = 20,
+      sortBy = 'id',
+      sortOrder = 'ASC'
+    } = options;
+
     const skip = (page - 1) * limit;
+    const where = excludeId ? { id: Not(excludeId) } : {};
+    const order = { [sortBy]: sortOrder } as FindOptionsOrder<User>;
 
     const [users, total] = await this.usersRepository.findAndCount({
-      where: { id: Not(excludeId) },
-      order: { [sortBy]: sortOrder },
+      where,
+      order,
       skip,
       take: limit,
     });
