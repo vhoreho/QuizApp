@@ -1,105 +1,40 @@
 # Quiz App
 
-A comprehensive quiz application with a modern React frontend and NestJS backend.
+Приложение для создания и прохождения тестов с различными типами вопросов.
 
-## Project Overview
+## Структура проекта
 
-This project is a full-featured quiz application that allows users to create, manage, and take quizzes. The system supports user authentication, quiz creation, quiz taking, and result tracking.
+- `frontend/` - React приложение
+- `backend/` - NestJS API
+- `docker-compose.yml` - Основной файл Docker Compose для разработки
+- `docker-compose.server.yml` - Файл Docker Compose для production
 
-## Project Structure
+## Запуск проекта
 
-The project follows a microservice architecture with separate frontend and backend applications.
+### Разработка
 
-### Frontend
+```bash
+docker-compose up
+```
 
-- Built with **React 18** and **TypeScript**
-- Uses **Vite** as the build tool
-- Styled with **Tailwind CSS** and **Radix UI** components
-- State management with **React Query** for server state
-- Form handling with **React Hook Form** and **Zod** for validation
-- Routing with **React Router DOM**
-- Charting with **Recharts**
+### Production
+
+```bash
+docker-compose -f docker-compose.server.yml up
+```
+
+## Переменные окружения
 
 ### Backend
 
-- Built with **NestJS** framework and **TypeScript**
-- Uses **PostgreSQL** database with **TypeORM** for ORM
-- Authentication with **JWT** and **Passport.js**
-- Validation with **class-validator** and **class-transformer**
-- Logging with **Pino**
+- `DB_HOST` - хост базы данных (по умолчанию: db)
+- `DB_PORT` - порт базы данных (по умолчанию: 5432)
+- `DB_USER` - пользователь базы данных (по умолчанию: quizuser)
+- `DB_PASSWORD` - пароль базы данных (по умолчанию: quizpassword)
+- `DB_NAME` - название базы данных (по умолчанию: quizdb)
+- `JWT_SECRET` - секретный ключ для JWT
+- `RUN_SEED` - запускать ли сид при старте (по умолчанию: true)
 
-## Features
+### Frontend
 
-- User authentication and authorization
-- Quiz creation and management
-- Questions and answers management
-- Quiz taking functionality
-- Result tracking and statistics
-- User performance analytics
-
-## Modules
-
-### Backend Modules
-- User Management
-- Quiz Management
-- Question Management
-- Result Tracking
-- Authentication
-- Administration
-- Student Interface
-- Teacher Interface
-
-### Frontend Pages
-- Dashboard
-- Quiz Creation and Editing
-- Quiz Taking Interface
-- Results and Analytics
-- User Management
-- Authentication Pages
-
-## API Endpoints
-
-The project includes comprehensive API endpoints for all functionality:
-
-- **General Endpoints**: Health check and logging
-- **Quizzes**: CRUD operations for quizzes
-- **Users**: User management endpoints
-- **Questions**: Question management for quizzes
-- **Results**: Quiz result tracking and analytics
-
-## Deployment
-
-The application is containerized using Docker and can be deployed using Docker Compose. The setup includes:
-
-- Frontend container with Nginx
-- Backend container with Node.js
-- PostgreSQL database container
-
-## Development Setup
-
-1. Clone the repository
-2. Set up environment variables
-3. Run the database:
-   ```
-   docker-compose up -d db
-   ```
-4. Start the backend:
-   ```
-   cd backend
-   npm install
-   npm run start:dev
-   ```
-5. Start the frontend:
-   ```
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-## Testing
-
-The project includes Insomnia configuration files for API testing.
-
-## License
-
-UNLICENSED - Private project 
+- `VITE_API_URL` - URL API (по умолчанию: http://localhost:3000) 
