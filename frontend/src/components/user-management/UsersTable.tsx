@@ -1,13 +1,4 @@
-import { User, UserRole } from "@/lib/types";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,119 +7,147 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { User, UserRole } from "@/lib/types";
+import { useUsers } from "@/hooks/queries/useUsers";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  PersonIcon,
-  GearIcon,
-  MagnifyingGlassIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@radix-ui/react-icons";
 
 interface UsersTableProps {
-  users: User[];
+  onUserSelect?: (user: User) => void;
 }
 
-export const UsersTable = ({ users }: UsersTableProps) => {
+export function UsersTable({ onUserSelect }: UsersTableProps) {
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<keyof User>("id");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
+
+  const { data, isLoading, error } = useUsers({
+    page,
+    limit: 10,
+    sortBy,
+    sortOrder,
+  });
+
+  const handleSort = (column: keyof User) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+    } else {
+      setSortBy(column);
+      setSortOrder("ASC");
+    }
+  };
+
+  const renderSortIcon = (column: keyof User) => {
+    if (sortBy !== column) return null;
+    return sortOrder === "ASC" ? <ChevronUpIcon /> : <ChevronDownIcon />;
+  };
+
+  if (error) {
+    return <div>Error loading users: {error.message}</div>;
+  }
+
+  const totalPages = data ? Math.ceil(data.total / 10) : 0;
+
+  const getUserFullName = (user: User) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user.firstName || user.lastName || "-";
+  };
+
   return (
-    <Card className="border border-border bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950 dark:to-sky-950 shadow-md hover:shadow-lg transition-all duration-300 group overflow-hidden">
-      <CardHeader>
-        <div className="absolute top-2 right-2 opacity-5 group-hover:opacity-10 transition-opacity">
-          <PersonIcon className="h-32 w-32 text-blue-500 rotate-12" />
-        </div>
-        <CardTitle className="flex items-center group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-          <div className="bg-blue-100 p-2 rounded-full mr-2 dark:bg-blue-900">
-            <PersonIcon className="h-5 w-5 text-blue-500" />
-          </div>
-          Пользователи
-        </CardTitle>
-        <CardDescription className="flex items-center gap-2">
-          <MagnifyingGlassIcon className="h-3.5 w-3.5 text-muted-foreground" />
-          Список всех пользователей в системе
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border border-blue-100 dark:border-blue-800/30">
-          <Table>
-            <TableHeader className="bg-blue-50/50 dark:bg-blue-950/50">
-              <TableRow className="hover:bg-blue-100/50 dark:hover:bg-blue-900/20">
-                <TableHead className="text-blue-700 dark:text-blue-300">
-                  Имя
-                </TableHead>
-                <TableHead className="text-blue-700 dark:text-blue-300">
-                  Имя пользователя
-                </TableHead>
-                <TableHead className="text-blue-700 dark:text-blue-300">
-                  Роль
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
+    <div className="space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead
+              className="cursor-pointer"
+              onClick={() => handleSort("id")}
+            >
+              ID {renderSortIcon("id")}
+            </TableHead>
+            <TableHead
+              className="cursor-pointer"
+              onClick={() => handleSort("username")}
+            >
+              Username {renderSortIcon("username")}
+            </TableHead>
+            <TableHead>Full Name</TableHead>
+            <TableHead
+              className="cursor-pointer"
+              onClick={() => handleSort("role")}
+            >
+              Role {renderSortIcon("role")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading
+            ? Array.from({ length: 10 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-8" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-16" />
+                  </TableCell>
+                </TableRow>
+              ))
+            : data?.users.map((user) => (
                 <TableRow
                   key={user.id}
-                  className="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                  className={
+                    onUserSelect ? "cursor-pointer hover:bg-muted" : ""
+                  }
+                  onClick={() => onUserSelect?.(user)}
                 >
-                  <TableCell className="font-medium">
-                    {user.firstName && user.lastName
-                      ? `${user.firstName} ${user.lastName}`
-                      : user.firstName || user.lastName || user.username}
-                  </TableCell>
+                  <TableCell>{user.id}</TableCell>
                   <TableCell>{user.username}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        user.role === UserRole.ADMIN
-                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                          : user.role === UserRole.TEACHER
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                          : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                      }`}
-                    >
-                      {user.role === UserRole.ADMIN && (
-                        <div className="bg-purple-200 dark:bg-purple-800 p-1 rounded-full mr-1.5">
-                          <PersonIcon className="h-2 w-2 text-purple-700 dark:text-purple-300" />
-                        </div>
-                      )}
-                      {user.role === UserRole.TEACHER && (
-                        <div className="bg-green-200 dark:bg-green-800 p-1 rounded-full mr-1.5">
-                          <GearIcon className="h-2 w-2 text-green-700 dark:text-green-300" />
-                        </div>
-                      )}
-                      {user.role === UserRole.STUDENT && (
-                        <div className="bg-blue-200 dark:bg-blue-800 p-1 rounded-full mr-1.5">
-                          <PersonIcon className="h-2 w-2 text-blue-700 dark:text-blue-300" />
-                        </div>
-                      )}
-                      {user.role === UserRole.ADMIN
-                        ? "Администратор"
-                        : user.role === UserRole.TEACHER
-                        ? "Преподаватель"
-                        : "Студент"}
-                    </span>
-                  </TableCell>
+                  <TableCell>{getUserFullName(user)}</TableCell>
+                  <TableCell>{user.role}</TableCell>
                 </TableRow>
               ))}
-              {users.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <PersonIcon className="h-10 w-10 mb-2 text-muted-foreground/30" />
-                      Пользователи не найдены
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        </TableBody>
+      </Table>
+
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {data ? `Total ${data.total} users` : ""}
         </div>
-      </CardContent>
-      <CardFooter className="bg-gradient-to-r from-blue-50/50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/50 border-t border-blue-100 dark:border-blue-800/30">
-        <Button
-          variant="outline"
-          className="w-full border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-        >
-          <MagnifyingGlassIcon className="h-4 w-4 mr-2" />
-          Поиск пользователей
-        </Button>
-      </CardFooter>
-    </Card>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1 || isLoading}
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+          <div className="text-sm">
+            Page {page} of {totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages || isLoading}
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
   );
-};
+}

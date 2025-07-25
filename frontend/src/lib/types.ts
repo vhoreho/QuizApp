@@ -167,3 +167,22 @@ export interface RegisterUserData {
   password: string;
   role: UserRole;
 }
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface SortParams<T> {
+  sortBy?: keyof T;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+export interface UsersResponse extends PaginatedResponse<User> {
+  users: User[];
+}
