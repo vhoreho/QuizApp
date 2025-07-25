@@ -27,7 +27,7 @@ import { toast } from "@/components/ui/use-toast";
 import { ROUTES, MESSAGES } from "@/lib/constants";
 import { Answer, Question } from "@/lib/types";
 import { QuestionRenderer } from "@/components/questions/QuestionRenderer";
-import { getUserIdFromLocalStorage, checkAuthStatus } from "@/utils/authCheck";
+import { useUser } from "@/contexts/UserContext";
 import {
   TimerIcon,
   ReloadIcon,
@@ -57,6 +57,7 @@ const TakeQuizPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const { user } = useUser();
 
   const quizIdNumber = id ? parseInt(id) : 0;
 
@@ -284,47 +285,24 @@ const TakeQuizPage = () => {
         return;
       }
 
-      // Check authentication status before submitting
-      try {
-        const authStatus = await checkAuthStatus();
-        if (!authStatus.isAuthenticated) {
-          toast({
-            variant: "destructive",
-            title: "Ошибка аутентификации",
-            description: "Ваша сессия истекла. Пожалуйста, войдите снова.",
-          });
-          navigate(ROUTES.LOGIN);
-          return;
-        }
-
-        // Get user ID from local storage as a backup
-        const userId = getUserIdFromLocalStorage();
-        if (!userId) {
-          toast({
-            variant: "destructive",
-            title: "Ошибка аутентификации",
-            description:
-              "Не удалось определить ID пользователя. Пожалуйста, войдите снова.",
-          });
-          navigate(ROUTES.LOGIN);
-          return;
-        }
-
-        console.log("Submitting quiz with user ID:", userId);
-
-        // Отправляем данные с указанием quizId
-        submitQuizMutation.mutate({
-          quizId: Number(id),
-          answers: answers,
-        });
-      } catch (error) {
-        console.error("Error checking auth status:", error);
+      // Check if user is authenticated
+      if (!user) {
         toast({
           variant: "destructive",
-          title: "Ошибка",
-          description: "Произошла ошибка при проверке аутентификации.",
+          title: "Ошибка аутентификации",
+          description: "Ваша сессия истекла. Пожалуйста, войдите снова.",
         });
+        navigate(ROUTES.LOGIN);
+        return;
       }
+
+      console.log("Submitting quiz with user ID:", user.id);
+
+      // Submit the quiz
+      submitQuizMutation.mutate({
+        quizId: Number(id),
+        answers: answers,
+      });
     }
   };
 
