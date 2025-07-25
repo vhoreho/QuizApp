@@ -1,55 +1,40 @@
-# Используем Node.js 18 как базовый образ
+# Base stage
 FROM node:18-alpine AS base
-
-# Устанавливаем рабочую директорию
-WORKDIR /app
-
-# Устанавливаем netcat для проверки доступности базы данных
+WORKDIR /usr/src/app
 RUN apk add --no-cache netcat-openbsd
 
-# Копируем package.json и package-lock.json
+# Development stage
+FROM base AS development
 COPY package*.json ./
+RUN npm install
+COPY . .
+CMD ["npm", "run", "start:dev"]
 
-# Этап установки зависимостей
+# Dependencies stage
 FROM base AS deps
+COPY package*.json ./
 RUN npm ci
 
-# Этап разработки (с dev зависимостями)
-FROM base AS dev-deps
-RUN npm ci
-
-# Этап сборки
-FROM dev-deps AS build
+# Build stage
+FROM deps AS build
 COPY . .
 RUN npm run build
 
-# Финальный этап
+# Production stage
 FROM base AS production
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/dist ./dist
+COPY package*.json ./
+COPY entrypoint.sh ./
 
-# Создаем пользователя для безопасности
+RUN chmod +x /usr/src/app/entrypoint.sh
+
 RUN addgroup -g 1001 -S nodejs && \
-  adduser -S nestjs -u 1001 -G nodejs
-
-# Устанавливаем владельца для рабочей директории
-RUN chown -R nestjs:nodejs /app
-
-# Копируем только production зависимости
-COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
-
-# Копируем собранное приложение
-COPY --from=build --chown=nestjs:nodejs /app/dist ./dist
-
-# Копируем необходимые файлы
-COPY --chown=nestjs:nodejs package*.json ./
-COPY --chown=nestjs:nodejs entrypoint.sh ./
-
-# Делаем entrypoint.sh исполняемым
-RUN chmod +x /app/entrypoint.sh
+  adduser -S nestjs -u 1001 && \
+  chown -R nestjs:nodejs /usr/src/app
 
 USER nestjs
 
-# Открываем порт
 EXPOSE 3000
 
-# Используем entrypoint.sh для запуска
-ENTRYPOINT ["/app/entrypoint.sh"] 
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"] 

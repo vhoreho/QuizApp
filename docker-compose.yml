@@ -60,7 +60,6 @@ services:
       - DB_NAME=${DB_NAME:-quizdb}
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - TYPEORM_SYNCHRONIZE=true
-      - RUN_SEED=${RUN_SEED:-true}
     depends_on:
       db:
         condition: service_healthy
