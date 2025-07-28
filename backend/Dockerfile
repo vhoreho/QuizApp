@@ -29,8 +29,8 @@ COPY entrypoint.sh ./
 
 RUN chmod +x /usr/src/app/entrypoint.sh
 
-RUN addgroup -g 1001 -S nodejs && \
-  adduser -S nestjs -u 1001 && \
+RUN addgroup -S nodejs && \
+  adduser -S nestjs -G nodejs && \
   chown -R nestjs:nodejs /usr/src/app
 
 USER nestjs
