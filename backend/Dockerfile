@@ -29,12 +29,6 @@ COPY entrypoint.sh ./
 
 RUN chmod +x /usr/src/app/entrypoint.sh
 
-RUN addgroup -S nodejs && \
-  adduser -S nestjs -G nodejs && \
-  chown -R nestjs:nodejs /usr/src/app
-
-USER nestjs
-
 EXPOSE 3000
 
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"] 
