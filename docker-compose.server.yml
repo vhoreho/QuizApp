@@ -1,48 +1,52 @@
 version: "3.8"
 
 services:
+  # База данных PostgreSQL
   db:
     image: postgres:15
     container_name: quiz-app-db
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5434}:5432"
     environment:
-      - POSTGRES_USER=quizuser
-      - POSTGRES_PASSWORD=quizpassword
-      - POSTGRES_DB=quizdb
+      - POSTGRES_USER=${DB_USER:-quizuser}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-quizpassword}
+      - POSTGRES_DB=${DB_NAME:-quizdb}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - quiz-network
     restart: unless-stopped
 
+  # Бэкенд NestJS
   backend:
-    image: quiz-app-backend:latest
+    image: ${DOCKER_REGISTRY:-localhost}/quiz-app-backend:${TAG:-latest}
     container_name: quiz-app-backend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_USER=quizuser
-      - DB_PASSWORD=quizpassword
-      - DB_NAME=quizdb
-      - JWT_SECRET=simple-jwt-secret
+      - DB_USER=${DB_USER:-quizuser}
+      - DB_PASSWORD=${DB_PASSWORD:-quizpassword}
+      - DB_NAME=${DB_NAME:-quizdb}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - TYPEORM_SYNCHRONIZE=true
+      - RUN_SEED=true
     depends_on:
       - db
     networks:
       - quiz-network
     restart: unless-stopped
 
+  # Фронтенд React
   frontend:
-    image: quiz-app-frontend:latest
+    image: ${DOCKER_REGISTRY:-localhost}/quiz-app-frontend:${TAG:-latest}
     container_name: quiz-app-frontend
     ports:
       - "80:80"
     environment:
-      - VITE_API_URL=http://localhost:3000
+      - VITE_API_URL=http://localhost:3001
     depends_on:
       - backend
     networks:
