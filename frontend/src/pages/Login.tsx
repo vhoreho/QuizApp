@@ -77,8 +77,8 @@ export default function Login() {
         password: data.password,
       });
 
-      // Проверяем, что в ответе есть токен доступа
-      if (result && result.access_token) {
+      // Проверяем, что в ответе есть данные пользователя
+      if (result && result.user) {
         toast({
           title: "Успех",
           description: MESSAGES.SUCCESS.LOGIN_SUCCESS,
@@ -88,8 +88,8 @@ export default function Login() {
         const redirectPath = getRedirectPathForRole(result.user.role);
         navigate(redirectPath, { replace: true });
       } else {
-        // Если токена нет, значит что-то пошло не так
-        throw new Error("Ошибка входа: Отсутствует токен доступа");
+        // Если данных пользователя нет, значит что-то пошло не так
+        throw new Error("Ошибка входа: Отсутствуют данные пользователя");
       }
     } catch (error) {
       console.error("Login error:", error);
