@@ -50,7 +50,7 @@ services:
       dockerfile: Dockerfile
     container_name: quiz-app-backend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
       - DB_HOST=db
@@ -60,6 +60,7 @@ services:
       - DB_NAME=${DB_NAME:-quizdb}
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - TYPEORM_SYNCHRONIZE=true
+      - RUN_SEED=true
     depends_on:
       db:
         condition: service_healthy
@@ -76,7 +77,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - VITE_API_URL=http://localhost:3000
+      - VITE_API_URL=http://localhost:3001
     depends_on:
       - backend
     networks:
